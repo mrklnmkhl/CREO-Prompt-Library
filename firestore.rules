@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: prompts
+    // Fields:
+    //   - title: string (required)
+    //   - content: string (required)
+    //   - exampleUrl: string (optional)
+    //   - category: string (optional)
+    //   - type: string (required, ['image', 'video'])
+    //   - tags: list (optional)
+    //   - createdAt: timestamp
+    //   - updatedAt: timestamp
+    //   - authorUid: string (required)
+    //   - linkedPromptIds: list (optional)
+    //
+    // Collection: categories
+    // Fields:
+    //   - name: string (required)
+    //
+    // Collection: users
+    // Fields:
+    //   - email: string (required)
+    //   - role: string (required, ['admin', 'user'])
+    //   - displayName: string
+    //   - favoritePromptIds: list (optional)
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email.lower() == "mme.creo@lidera.agency" || 
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+    }
+
+    function isValidPrompt(data) {
+      return data.keys().hasAll(['title', 'content', 'authorUid', 'type']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 10000 &&
+             data.type in ['image', 'video'] &&
+             (!('exampleUrl' in data) || data.exampleUrl == null || (data.exampleUrl is string && data.exampleUrl.size() < 1000000)) &&
+             (!('category' in data) || data.category == null || (data.category is string && data.category.size() < 50)) &&
+             (!('tags' in data) || data.tags == null || (data.tags is list && data.tags.size() < 20)) &&
+             (!('linkedPromptIds' in data) || data.linkedPromptIds == null || (data.linkedPromptIds is list && data.linkedPromptIds.size() < 20));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+             data.email is string && data.role in ['admin', 'user'] &&
+             (!('favoritePromptIds' in data) || data.favoritePromptIds == null || (data.favoritePromptIds is list && data.favoritePromptIds.size() < 500));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role == 'user' || (request.resource.data.role == 'admin' && request.auth.token.email.lower() == "mme.creo@lidera.agency"));
+      allow update: if isAdmin() || (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role);
+    }
+
+    match /prompts/{promptId} {
+      allow read: if true; // Publicly readable for the library
+      allow create: if isAuthenticated() && isValidPrompt(request.resource.data);
+      allow update: if isAuthenticated() && isValidPrompt(request.resource.data);
+      allow delete: if isAuthenticated();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthenticated();
+    }
+  }
+}
