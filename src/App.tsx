@@ -112,7 +112,7 @@ const TRANSLATIONS = {
     uploadImage: "Upload Image",
     uploading: "Uploading...",
     orUrl: "or use URL",
-    fileTooLarge: "File is too large (max 600KB for DB)",
+    fileTooLarge: "File is too large",
     uploadError: "Image upload error.",
     favorites: "Favorites",
     tags: "Tags",
@@ -174,7 +174,7 @@ const TRANSLATIONS = {
     uploadImage: "Загрузить фото",
     uploading: "Загрузка...",
     orUrl: "или используйте URL",
-    fileTooLarge: "Файл слишком большой (макс. 600КБ для БД)",
+    fileTooLarge: "Файл слишком большой",
     uploadError: "Ошибка сохранения изображения.",
     favorites: "Избранное",
     tags: "Теги",
@@ -571,28 +571,14 @@ export default function App() {
         try {
           const userRef = doc(db, 'users', currentUser.uid);
           const userDoc = await getDoc(userRef);
-          const isAdminEmail = currentUser.email?.toLowerCase() === "mme.creo@lidera.agency";
           
           if (userDoc.exists()) {
-            const data = userDoc.data() as UserProfile;
-            // If email matches admin but role is not admin, update it
-            if (isAdminEmail && data.role !== 'admin') {
-              try {
-                await updateDoc(userRef, { role: 'admin' });
-                setUserProfile({ ...data, role: 'admin' });
-              } catch (updateError) {
-                console.error("Error updating admin role:", updateError);
-                setUserProfile(data); // Fallback to existing profile
-              }
-            } else {
-              setUserProfile(data);
-            }
+            setUserProfile(userDoc.data() as UserProfile);
           } else {
             // Create new profile
             const newProfile: UserProfile = {
               uid: currentUser.uid,
               email: currentUser.email || '',
-              role: isAdminEmail ? 'admin' : 'user',
               displayName: currentUser.displayName || ''
             };
             try {
@@ -710,12 +696,6 @@ export default function App() {
       if (selectedFile) {
         console.log("Converting image to base64...");
         try {
-          // Check size again just in case
-          if (selectedFile.size > 600 * 1024) {
-             toast.error(t.fileTooLarge);
-             setIsUploading(false);
-             return;
-          }
           exampleUrl = await fileToBase64(selectedFile);
           console.log("Conversion successful");
         } catch (uploadErr) {
@@ -765,10 +745,6 @@ export default function App() {
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 600 * 1024) {
-        toast.error(t.fileTooLarge);
-        return;
-      }
       setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -776,7 +752,7 @@ export default function App() {
       };
       reader.readAsDataURL(file);
     }
-  }, [t.fileTooLarge]);
+  }, []);
 
   const handleDeletePrompt = useCallback(async (id: string) => {
     try {
@@ -896,7 +872,6 @@ export default function App() {
                 </button>
                 <div className="hidden sm:block text-right">
                   <p className="text-sm font-medium">{user.displayName}</p>
-                  <p className="text-[10px] text-white/40 uppercase tracking-widest">{userProfile?.role}</p>
                 </div>
                 <button 
                   onClick={handleLogout}
@@ -1253,7 +1228,7 @@ export default function App() {
                         <div className="flex flex-col items-center gap-4 text-white/20 group-hover/upload:text-emerald-400 transition-colors">
                           <Upload size={64} />
                           <span className="text-sm font-bold uppercase tracking-widest">{t.uploadImage}</span>
-                          <span className="text-[10px] opacity-50">PNG, JPG (Max 600KB)</span>
+                          <span className="text-[10px] opacity-50">PNG, JPG</span>
                         </div>
                       )}
                       <input 

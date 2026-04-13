@@ -20,15 +20,14 @@
     },
     "User": {
       "title": "User",
-      "description": "User profile and roles.",
+      "description": "User profile.",
       "type": "object",
       "properties": {
         "email": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "user"] },
         "displayName": { "type": "string" },
         "favoritePromptIds": { "type": "array", "items": { "type": "string" }, "description": "List of favorite prompt IDs." }
       },
-      "required": ["email", "role"]
+      "required": ["email"]
     }
   },
   "firestore": {

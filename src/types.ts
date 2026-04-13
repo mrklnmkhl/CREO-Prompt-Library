@@ -18,7 +18,6 @@ export interface Prompt {
 export interface UserProfile {
   uid: string;
   email: string;
-  role: 'admin' | 'user';
   displayName?: string;
   favoritePromptIds?: string[];
 }
