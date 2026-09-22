@@ -264,7 +264,7 @@ const HighlightedPrompt = memo(({ content, values = {} }: { content: string; val
         if (part.startsWith('[') && part.endsWith(']')) {
           const key = part.slice(1, -1);
           return (
-            <span key={i} className="text-[#ff2d55] font-bold bg-[#ff2d55]/10 px-0.5 rounded">
+            <span key={i} className="text-ph font-bold bg-ph/10 px-0.5 rounded">
               {values[key] || part}
             </span>
           );
@@ -282,27 +282,27 @@ const MarkdownPrompt = memo(({ content, values = {} }: { content: string; values
         remarkPlugins={[remarkHighlightPlaceholders]}
         components={{
           p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
-          strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
-          em: ({ children }) => <em className="italic text-white/70">{children}</em>,
+          strong: ({ children }) => <strong className="font-bold text-ink">{children}</strong>,
+          em: ({ children }) => <em className="italic text-ink/70">{children}</em>,
           ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,
           ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1">{children}</ol>,
-          li: ({ children }) => <li className="text-white/80">{children}</li>,
-          code: ({ children }) => <code className="bg-white/10 px-1.5 py-0.5 rounded text-emerald-300 text-xs">{children}</code>,
-          h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-white">{children}</h1>,
-          h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-white">{children}</h2>,
-          h3: ({ children }) => <h3 className="text-sm font-bold mb-2 text-white">{children}</h3>,
+          li: ({ children }) => <li className="text-ink/80">{children}</li>,
+          code: ({ children }) => <code className="bg-ink/10 px-1.5 py-0.5 rounded text-accent-hover text-xs">{children}</code>,
+          h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-ink">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-ink">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-sm font-bold mb-2 text-ink">{children}</h3>,
           a: ({ children, href }) => (
-            <a href={href} target="_blank" rel="noreferrer" className="text-emerald-400 underline">
+            <a href={href} target="_blank" rel="noreferrer" className="text-accent underline">
               {children}
             </a>
           ),
           blockquote: ({ children }) => (
-            <blockquote className="border-l-2 border-emerald-400/40 pl-4 italic text-white/60 mb-3">{children}</blockquote>
+            <blockquote className="border-l-2 border-accent/40 pl-4 italic text-ink/60 mb-3">{children}</blockquote>
           ),
           mark: (props: any) => {
             const key = props['data-placeholder'];
             return (
-              <span className="text-[#ff2d55] font-bold bg-[#ff2d55]/10 px-0.5 rounded">
+              <span className="text-ph font-bold bg-ph/10 px-0.5 rounded">
                 {values[key] || props.children}
               </span>
             );
@@ -350,16 +350,16 @@ const PromptCard = memo(({
       transition={{ duration: 0.18, ease: "easeInOut" }}
       onClick={isBulkMode ? () => onToggleSelect(prompt.id!) : undefined}
       className={cn(
-        "group relative bg-white/5 border rounded-xl overflow-hidden transition-colors duration-200 flex flex-col shadow-lg",
-        isBulkMode ? "cursor-pointer" : "hover:border-emerald-400/30 hover:shadow-emerald-400/5",
-        isSelected ? "border-emerald-400/60 ring-2 ring-emerald-400/30" : "border-white/10",
+        "group relative bg-ink/5 border rounded-xl overflow-hidden transition-colors duration-200 flex flex-col shadow-lg",
+        isBulkMode ? "cursor-pointer" : "hover:border-accent/30 hover:shadow-accent/5",
+        isSelected ? "border-accent/60 ring-2 ring-accent/30" : "border-ink/10",
         viewMode === 'list' && "flex flex-row h-48"
       )}
     >
       {isBulkMode && (
         <div className={cn(
           "absolute top-3 left-3 z-30 w-6 h-6 rounded-md flex items-center justify-center border-2 transition-all",
-          isSelected ? "bg-emerald-400 border-emerald-400 text-black" : "bg-black/40 border-white/30 text-transparent"
+          isSelected ? "bg-accent border-accent text-accent-ink" : "bg-black/40 border-ink/30 text-transparent"
         )}>
           <Check size={14} strokeWidth={3} />
         </div>
@@ -368,7 +368,7 @@ const PromptCard = memo(({
       {/* Preview Image */}
       <div
         className={cn(
-          "relative bg-[#111111] overflow-hidden shrink-0",
+          "relative bg-surface-2 overflow-hidden shrink-0",
           isBulkMode ? "" : "cursor-pointer",
           viewMode === 'grid' ? "aspect-square" : "w-64 h-full"
         )}
@@ -382,14 +382,14 @@ const PromptCard = memo(({
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-white/10">
+          <div className="w-full h-full flex flex-col items-center justify-center text-ink/10">
             <ImageIcon size={32} />
             <span className="text-[8px] uppercase tracking-widest mt-2">{t.noPreview}</span>
           </div>
         )}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <div className="bg-white/10 backdrop-blur-md p-2 rounded-full border border-white/20">
-            <ExternalLink size={16} className="text-white" />
+          <div className="bg-ink/10 backdrop-blur-md p-2 rounded-full border border-ink/20">
+            <ExternalLink size={16} className="text-ink" />
           </div>
         </div>
 
@@ -403,8 +403,8 @@ const PromptCard = memo(({
             className={cn(
               "absolute top-3 right-3 z-20 p-2 rounded-full backdrop-blur-md border transition-all",
               userProfile?.favoritePromptIds?.includes(prompt.id!)
-                ? "bg-red-500/20 border-red-500/30 text-red-500"
-                : "bg-black/20 border-white/10 text-white/40 hover:text-white hover:bg-black/40"
+                ? "bg-danger/20 border-danger/30 text-danger"
+                : "bg-black/20 border-ink/10 text-ink/40 hover:text-ink hover:bg-black/40"
             )}
           >
             <Heart size={14} fill={userProfile?.favoritePromptIds?.includes(prompt.id!) ? "currentColor" : "none"} />
@@ -415,22 +415,22 @@ const PromptCard = memo(({
       {/* Content */}
       <div className="p-4 flex flex-col flex-1">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400/80">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-accent/80">
             {prompt.category || 'General'}
           </span>
-          <div className="w-[1px] h-3 bg-white/10" />
+          <div className="w-[1px] h-3 bg-ink/10" />
           <span className={cn(
             "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm",
             prompt.type === 'video'
-              ? "bg-violet-500/20 text-violet-300 border border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.2)]"
-              : "bg-orange-500/10 text-orange-400"
+              ? "bg-chip-video/20 text-chip-video-text border border-chip-video/30 shadow-[0_0_10px_rgba(203,191,255,0.25)]"
+              : "bg-chip-image/10 text-chip-image-text"
           )}>
             {prompt.type === 'video' ? 'Video' : 'Image'}
           </span>
           {typeof prompt.copyCount === 'number' && prompt.copyCount > 0 && (
             <>
-              <div className="w-[1px] h-3 bg-white/10 ml-auto" />
-              <span className="flex items-center gap-1 text-[9px] font-bold text-white/20">
+              <div className="w-[1px] h-3 bg-ink/10 ml-auto" />
+              <span className="flex items-center gap-1 text-[9px] font-bold text-ink/20">
                 <Copy size={9} />
                 {prompt.copyCount}
               </span>
@@ -438,26 +438,26 @@ const PromptCard = memo(({
           )}
         </div>
 
-        <h3 className="text-base font-bold mb-1 line-clamp-1 group-hover:text-emerald-400 transition-colors">
+        <h3 className="text-base font-display font-bold mb-1 line-clamp-1 group-hover:text-accent transition-colors">
           {prompt.title}
         </h3>
 
         {prompt.tags && prompt.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
             {prompt.tags.slice(0, 3).map((tag, idx) => (
-              <span key={idx} className="text-[8px] px-1.5 py-0.5 bg-white/5 text-white/40 rounded-full border border-white/5">
+              <span key={idx} className="text-[8px] px-1.5 py-0.5 bg-ink/5 text-ink/40 rounded-full border border-ink/5">
                 #{tag}
               </span>
             ))}
             {prompt.tags.length > 3 && (
-              <span className="text-[8px] px-1.5 py-0.5 text-white/20">
+              <span className="text-[8px] px-1.5 py-0.5 text-ink/20">
                 +{prompt.tags.length - 3}
               </span>
             )}
           </div>
         )}
 
-        <p className="text-xs text-white/40 line-clamp-2 mb-4 flex-1 leading-relaxed">
+        <p className="text-xs text-ink/40 line-clamp-2 mb-4 flex-1 leading-relaxed">
           <HighlightedPrompt content={prompt.content} />
         </p>
 
@@ -468,7 +468,7 @@ const PromptCard = memo(({
                 e.stopPropagation();
                 copyToClipboard(prompt.content, prompt.id);
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-medium transition-all active:scale-95"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-ink/5 hover:bg-ink/10 border border-ink/10 rounded-lg text-xs font-medium transition-all active:scale-95"
             >
               <Copy size={14} />
               <span>{t.copyPrompt}</span>
@@ -480,7 +480,7 @@ const PromptCard = memo(({
                   onDuplicate(prompt);
                 }}
                 title={t.duplicate}
-                className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-all active:scale-95"
+                className="p-2 bg-ink/5 hover:bg-ink/10 border border-ink/10 rounded-lg text-ink/40 hover:text-accent transition-all active:scale-95"
               >
                 <CopyPlus size={14} />
               </button>
@@ -1044,45 +1044,45 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#050505] text-white">
+      <div className="min-h-screen flex items-center justify-center bg-bg text-ink">
         <motion.div 
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-8 h-8 border-2 border-emerald-400 border-t-transparent rounded-full"
+          className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full"
         />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-[#e5e5e5] font-sans selection:bg-emerald-400/30 relative overflow-x-hidden">
+    <div className="min-h-screen bg-bg text-ink font-sans selection:bg-accent/30 relative overflow-x-hidden">
       <Toaster position="top-right" theme="dark" />
       
       {/* Background Gradient */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#050505] to-[#111111]" />
-        <div className="absolute bottom-[-20%] left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-emerald-500/5 blur-[120px] rounded-full" />
+        <div className="absolute inset-0 bg-gradient-to-b from-bg to-surface-2" />
+        <div className="absolute bottom-[-20%] left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-accent/5 blur-[120px] rounded-full" />
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#050505]/80 backdrop-blur-md border-b border-white/10">
+      <header className="sticky top-0 z-40 bg-bg/80 backdrop-blur-md border-b border-ink/10">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-emerald-400 rounded-lg flex items-center justify-center font-bold text-black rotate-3">
+            <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center font-display font-bold text-accent-ink rotate-3">
               C
             </div>
-            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
-              CREO <span className="text-emerald-400">Prompt</span> Library
+            <h1 className="text-xl font-display font-bold tracking-tight bg-gradient-to-r from-ink to-ink/60 bg-clip-text text-transparent">
+              CREO <span className="text-accent">Prompt</span> Library
             </h1>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center bg-white/5 rounded-full p-1 border border-white/10">
+            <div className="flex items-center bg-ink/5 rounded-full p-1 border border-ink/10">
               <button 
                 onClick={() => setSelectedTypeFilter(selectedTypeFilter === 'image' ? 'all' : 'image')}
                 className={cn(
                   "px-3 py-1 rounded-full text-[10px] font-bold transition-all flex items-center gap-1.5",
-                  selectedTypeFilter === 'image' ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20" : "text-white/40 hover:text-white"
+                  selectedTypeFilter === 'image' ? "bg-chip-image text-chip-image-text shadow-lg shadow-chip-image-text/20" : "text-ink/40 hover:text-ink"
                 )}
               >
                 <ImageIcon size={12} />
@@ -1092,7 +1092,7 @@ export default function App() {
                 onClick={() => setSelectedTypeFilter(selectedTypeFilter === 'video' ? 'all' : 'video')}
                 className={cn(
                   "px-3 py-1 rounded-full text-[10px] font-bold transition-all flex items-center gap-1.5",
-                  selectedTypeFilter === 'video' ? "bg-violet-500 text-white shadow-lg shadow-violet-500/20" : "text-white/40 hover:text-white"
+                  selectedTypeFilter === 'video' ? "bg-chip-video text-chip-video-text shadow-lg shadow-chip-video-text/20" : "text-ink/40 hover:text-ink"
                 )}
               >
                 <Video size={12} />
@@ -1100,12 +1100,12 @@ export default function App() {
               </button>
             </div>
 
-            <div className="flex items-center bg-white/5 rounded-full p-1 border border-white/10">
+            <div className="flex items-center bg-ink/5 rounded-full p-1 border border-ink/10">
               <button 
                 onClick={() => setLang('en')}
                 className={cn(
                   "px-2 py-1 rounded-full text-[10px] font-bold transition-all",
-                  lang === 'en' ? "bg-white text-black" : "text-white/40 hover:text-white"
+                  lang === 'en' ? "bg-ink text-bg" : "text-ink/40 hover:text-ink"
                 )}
               >
                 EN
@@ -1114,7 +1114,7 @@ export default function App() {
                 onClick={() => setLang('ru')}
                 className={cn(
                   "px-2 py-1 rounded-full text-[10px] font-bold transition-all",
-                  lang === 'ru' ? "bg-white text-black" : "text-white/40 hover:text-white"
+                  lang === 'ru' ? "bg-ink text-bg" : "text-ink/40 hover:text-ink"
                 )}
               >
                 RU
@@ -1127,7 +1127,7 @@ export default function App() {
                   onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
                   className={cn(
                     "p-2 rounded-full transition-all",
-                    showFavoritesOnly ? "bg-red-500/20 text-red-500" : "hover:bg-white/5 text-white/60 hover:text-white"
+                    showFavoritesOnly ? "bg-danger/20 text-danger" : "hover:bg-ink/5 text-ink/60 hover:text-ink"
                   )}
                   title={t.favorites}
                 >
@@ -1138,7 +1138,7 @@ export default function App() {
                 </div>
                 <button 
                   onClick={handleLogout}
-                  className="p-2 hover:bg-white/5 rounded-full transition-colors text-white/60 hover:text-white"
+                  className="p-2 hover:bg-ink/5 rounded-full transition-colors text-ink/60 hover:text-ink"
                 >
                   <LogOut size={20} />
                 </button>
@@ -1146,7 +1146,7 @@ export default function App() {
             ) : (
               <button 
                 onClick={handleLogin}
-                className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-full font-medium hover:bg-white/90 transition-all active:scale-95"
+                className="flex items-center gap-2 px-4 py-2 bg-accent text-accent-ink rounded-full font-bold hover:bg-accent-hover transition-all active:scale-95"
               >
                 <LogIn size={18} />
                 <span>{t.login}</span>
@@ -1161,18 +1161,18 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6 mb-8">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="relative w-full max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" size={18} />
               <input 
                 type="text" 
                 placeholder={t.search}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all"
+                className="w-full bg-ink/5 border border-ink/10 rounded-xl py-2.5 pl-10 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
               />
               {searchQuery && (
                 <button 
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/30 hover:text-ink transition-colors"
                 >
                   <X size={16} />
                 </button>
@@ -1184,7 +1184,7 @@ export default function App() {
                 {canScrollLeft && (
                   <button 
                     onClick={() => scroll('left')}
-                    className="absolute left-0 top-0 bottom-0 z-20 px-3 text-white/40 hover:text-white transition-colors bg-gradient-to-r from-[#050505] via-[#050505]/95 to-transparent flex items-center"
+                    className="absolute left-0 top-0 bottom-0 z-20 px-3 text-ink/40 hover:text-ink transition-colors bg-gradient-to-r from-bg via-bg/95 to-transparent flex items-center"
                   >
                     <ChevronLeft size={20} />
                   </button>
@@ -1200,8 +1200,8 @@ export default function App() {
                     className={cn(
                       "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all shrink-0",
                       selectedCategory === 'All' 
-                        ? "bg-emerald-400 text-black shadow-lg shadow-emerald-400/20" 
-                        : "bg-white/5 text-white/60 hover:bg-white/10"
+                        ? "bg-accent text-accent-ink shadow-lg shadow-accent/20" 
+                        : "bg-ink/5 text-ink/60 hover:bg-ink/10"
                     )}
                   >
                     {t.all}
@@ -1213,8 +1213,8 @@ export default function App() {
                       className={cn(
                         "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all shrink-0",
                         selectedCategory === cat 
-                          ? "bg-emerald-400 text-black shadow-lg shadow-emerald-400/20" 
-                          : "bg-white/5 text-white/60 hover:bg-white/10"
+                          ? "bg-accent text-accent-ink shadow-lg shadow-accent/20" 
+                          : "bg-ink/5 text-ink/60 hover:bg-ink/10"
                       )}
                     >
                       {cat}
@@ -1225,7 +1225,7 @@ export default function App() {
                 {canScrollRight && (
                   <button 
                     onClick={() => scroll('right')}
-                    className="absolute right-0 top-0 bottom-0 z-20 px-3 text-white/40 hover:text-white transition-colors bg-gradient-to-l from-[#050505] via-[#050505]/95 to-transparent flex items-center"
+                    className="absolute right-0 top-0 bottom-0 z-20 px-3 text-ink/40 hover:text-ink transition-colors bg-gradient-to-l from-bg via-bg/95 to-transparent flex items-center"
                   >
                     <ChevronRight size={20} />
                   </button>
@@ -1235,7 +1235,7 @@ export default function App() {
               {user && (
                 <button 
                   onClick={() => setIsCategoryModalOpen(true)}
-                  className="p-2 bg-white/5 border border-white/10 rounded-full text-white/40 hover:text-emerald-400 hover:bg-white/10 transition-all shrink-0"
+                  className="p-2 bg-ink/5 border border-ink/10 rounded-full text-ink/40 hover:text-accent hover:bg-ink/10 transition-all shrink-0"
                   title={t.manageCategories}
                 >
                   <Pencil size={16} />
@@ -1247,20 +1247,20 @@ export default function App() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="appearance-none bg-white/5 border border-white/10 rounded-full pl-8 pr-4 py-2 text-xs font-medium text-white/70 focus:outline-none focus:border-emerald-400/50 hover:bg-white/10 transition-all cursor-pointer"
+                className="appearance-none bg-ink/5 border border-ink/10 rounded-full pl-8 pr-4 py-2 text-xs font-medium text-ink/70 focus:outline-none focus:border-accent/50 hover:bg-ink/10 transition-all cursor-pointer"
               >
-                <option value="newest" className="bg-[#0a0a0a]">{t.sortNewest}</option>
-                <option value="oldest" className="bg-[#0a0a0a]">{t.sortOldest}</option>
-                <option value="alphabetical" className="bg-[#0a0a0a]">{t.sortAlphabetical}</option>
-                <option value="mostCopied" className="bg-[#0a0a0a]">{t.sortMostCopied}</option>
+                <option value="newest" className="bg-surface">{t.sortNewest}</option>
+                <option value="oldest" className="bg-surface">{t.sortOldest}</option>
+                <option value="alphabetical" className="bg-surface">{t.sortAlphabetical}</option>
+                <option value="mostCopied" className="bg-surface">{t.sortMostCopied}</option>
               </select>
-              <ArrowUpDown size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+              <ArrowUpDown size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30 pointer-events-none" />
             </div>
 
             <button
               onClick={handleExport}
               title={t.exportPrompts}
-              className="p-2.5 bg-white/5 border border-white/10 rounded-full text-white/40 hover:text-emerald-400 hover:bg-white/10 transition-all shrink-0"
+              className="p-2.5 bg-ink/5 border border-ink/10 rounded-full text-ink/40 hover:text-accent hover:bg-ink/10 transition-all shrink-0"
             >
               <Download size={18} />
             </button>
@@ -1278,7 +1278,7 @@ export default function App() {
                   onClick={() => importInputRef.current?.click()}
                   disabled={isImporting}
                   title={t.importPrompts}
-                  className="p-2.5 bg-white/5 border border-white/10 rounded-full text-white/40 hover:text-emerald-400 hover:bg-white/10 transition-all shrink-0 disabled:opacity-50"
+                  className="p-2.5 bg-ink/5 border border-ink/10 rounded-full text-ink/40 hover:text-accent hover:bg-ink/10 transition-all shrink-0 disabled:opacity-50"
                 >
                   {isImporting ? <Loader2 size={18} className="animate-spin" /> : <FileUp size={18} />}
                 </button>
@@ -1290,7 +1290,7 @@ export default function App() {
                   title={t.selectMode}
                   className={cn(
                     "p-2.5 rounded-full border transition-all shrink-0",
-                    isBulkMode ? "bg-emerald-400 border-emerald-400 text-black" : "bg-white/5 border-white/10 text-white/40 hover:text-emerald-400 hover:bg-white/10"
+                    isBulkMode ? "bg-accent border-accent text-accent-ink" : "bg-ink/5 border-ink/10 text-ink/40 hover:text-accent hover:bg-ink/10"
                   )}
                 >
                   <CheckSquare size={18} />
@@ -1298,16 +1298,16 @@ export default function App() {
               </>
             )}
 
-            <div className="flex items-center gap-2 border-l border-white/10 pl-2">
+            <div className="flex items-center gap-2 border-l border-ink/10 pl-2">
               <button
                 onClick={() => setViewMode('grid')}
-                className={cn("p-2 rounded-lg", viewMode === 'grid' ? "bg-white/10 text-white" : "text-white/40")}
+                className={cn("p-2 rounded-lg", viewMode === 'grid' ? "bg-ink/10 text-ink" : "text-ink/40")}
               >
                 <LayoutGrid size={20} />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={cn("p-2 rounded-lg", viewMode === 'list' ? "bg-white/10 text-white" : "text-white/40")}
+                className={cn("p-2 rounded-lg", viewMode === 'list' ? "bg-ink/10 text-ink" : "text-ink/40")}
               >
                 <ListIcon size={20} />
               </button>
@@ -1319,7 +1319,7 @@ export default function App() {
                   setEditingPrompt(null);
                   setIsModalOpen(true);
                 }}
-                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-400 text-black rounded-xl font-bold hover:bg-emerald-300 transition-all active:scale-95 shadow-lg shadow-emerald-400/20 whitespace-nowrap"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-accent text-accent-ink rounded-xl font-bold hover:bg-accent-hover transition-all active:scale-95 shadow-lg shadow-accent/20 whitespace-nowrap"
               >
                 <Plus size={20} />
                 <span>{t.addPrompt}</span>
@@ -1365,11 +1365,11 @@ export default function App() {
 
         {filteredPrompts.length === 0 && (
           <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/5 rounded-full mb-4 text-white/20">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-ink/5 rounded-full mb-4 text-ink/20">
               <Search size={32} />
             </div>
             <h3 className="text-xl font-bold mb-2">{t.noPrompts}</h3>
-            <p className="text-white/40">{t.noPromptsSub}</p>
+            <p className="text-ink/40">{t.noPromptsSub}</p>
           </div>
         )}
       </main>
@@ -1381,32 +1381,32 @@ export default function App() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-[#141414] border border-white/10 rounded-2xl px-5 py-3 shadow-2xl"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-surface-2 border border-ink/10 rounded-2xl px-5 py-3 shadow-2xl"
           >
-            <span className="text-sm font-bold text-white/80 whitespace-nowrap">
+            <span className="text-sm font-bold text-ink/80 whitespace-nowrap">
               {selectedBulkIds.length} {t.selectedCount}
             </span>
-            <div className="w-[1px] h-5 bg-white/10" />
+            <div className="w-[1px] h-5 bg-ink/10" />
             <select
               value=""
               onChange={(e) => handleBulkCategoryChange(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-400/50"
+              className="bg-ink/5 border border-ink/10 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-accent/50"
             >
-              <option value="" className="bg-[#0a0a0a]">{t.changeCategory}</option>
+              <option value="" className="bg-surface">{t.changeCategory}</option>
               {categories.map(cat => (
-                <option key={cat} value={cat} className="bg-[#0a0a0a]">{cat}</option>
+                <option key={cat} value={cat} className="bg-surface">{cat}</option>
               ))}
             </select>
             <button
               onClick={() => setShowBulkDeleteConfirm(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-bold transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-danger/10 hover:bg-danger/20 text-danger rounded-lg text-xs font-bold transition-all"
             >
               <Trash2 size={14} />
               {t.deleteSelected}
             </button>
             <button
               onClick={exitBulkMode}
-              className="p-1.5 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-all"
+              className="p-1.5 hover:bg-ink/10 rounded-lg text-ink/40 hover:text-ink transition-all"
             >
               <X size={16} />
             </button>
@@ -1427,23 +1427,23 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#141414] border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
+              className="bg-surface-2 border border-ink/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
             >
-              <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-16 h-16 bg-danger/10 text-danger rounded-full flex items-center justify-center mx-auto mb-6">
                 <Trash2 size={32} />
               </div>
               <h3 className="text-xl font-bold mb-2">{t.bulkDeleteConfirm}</h3>
-              <p className="text-white/40 text-sm mb-8">{selectedBulkIds.length} {t.selectedCount}</p>
+              <p className="text-ink/40 text-sm mb-8">{selectedBulkIds.length} {t.selectedCount}</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowBulkDeleteConfirm(false)}
-                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition-all"
+                  className="flex-1 py-3 bg-ink/5 hover:bg-ink/10 rounded-xl font-bold transition-all"
                 >
                   {t.cancel}
                 </button>
                 <button
                   onClick={handleBulkDelete}
-                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
+                  className="flex-1 py-3 bg-danger text-ink rounded-xl font-bold hover:bg-danger-hover transition-all shadow-lg shadow-danger/20"
                 >
                   {t.deleteSelected}
                 </button>
@@ -1476,37 +1476,37 @@ export default function App() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.98, y: 5 }}
                 transition={{ type: "spring", damping: 25, stiffness: 500 }}
-                className="relative w-full bg-[#0a0a0a] border border-white/10 rounded-3xl overflow-hidden flex flex-col md:flex-row h-[85vh] shadow-2xl"
+                className="relative w-full bg-surface border border-ink/10 rounded-3xl overflow-hidden flex flex-col md:flex-row h-[85vh] shadow-2xl"
               >
                 {modalView === 'link' ? (
-                  <div className="flex-1 flex flex-col bg-[#0a0a0a] overflow-hidden">
-                    <div className="px-8 py-6 border-b border-white/10 flex items-center justify-between bg-[#0a0a0a] z-10">
+                  <div className="flex-1 flex flex-col bg-surface overflow-hidden">
+                    <div className="px-8 py-6 border-b border-ink/10 flex items-center justify-between bg-surface z-10">
                       <div className="flex items-center gap-4">
                         <button 
                           onClick={() => setModalView('form')}
-                          className="p-2 hover:bg-white/10 rounded-full text-white/60 hover:text-white transition-all"
+                          className="p-2 hover:bg-ink/10 rounded-full text-ink/60 hover:text-ink transition-all"
                         >
                           <ChevronLeft size={24} />
                         </button>
-                        <h2 className="text-xl font-bold text-white">{t.addLinkedPrompt}</h2>
+                        <h2 className="text-xl font-bold text-ink">{t.addLinkedPrompt}</h2>
                       </div>
                       <button 
                         onClick={closeModal}
-                        className="p-2 hover:bg-white/10 rounded-full text-white/60 hover:text-white transition-all"
+                        className="p-2 hover:bg-ink/10 rounded-full text-ink/60 hover:text-ink transition-all"
                       >
                         <X size={24} />
                       </button>
                     </div>
 
-                    <div className="px-8 py-4 border-b border-white/10 space-y-4">
+                    <div className="px-8 py-4 border-b border-ink/10 space-y-4">
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={18} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" size={18} />
                         <input 
                           type="text" 
                           placeholder={t.searchPrompts}
                           value={linkSearchQuery}
                           onChange={(e) => setLinkSearchQuery(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all"
+                          className="w-full bg-ink/5 border border-ink/10 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                           autoFocus
                         />
                       </div>
@@ -1518,8 +1518,8 @@ export default function App() {
                           className={cn(
                             "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
                             linkSelectedCategory === 'All' 
-                              ? "bg-emerald-400 text-black shadow-lg shadow-emerald-400/20" 
-                              : "bg-white/5 text-white/40 hover:text-white hover:bg-white/10"
+                              ? "bg-accent text-accent-ink shadow-lg shadow-accent/20" 
+                              : "bg-ink/5 text-ink/40 hover:text-ink hover:bg-ink/10"
                           )}
                         >
                           {t.all}
@@ -1531,8 +1531,8 @@ export default function App() {
                             className={cn(
                               "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap shrink-0",
                               linkSelectedCategory === cat 
-                                ? "bg-emerald-400 text-black shadow-lg shadow-emerald-400/20" 
-                                : "bg-white/5 text-white/40 hover:text-white hover:bg-white/10"
+                                ? "bg-accent text-accent-ink shadow-lg shadow-accent/20" 
+                                : "bg-ink/5 text-ink/40 hover:text-ink hover:bg-ink/10"
                             )}
                           >
                             {cat}
@@ -1566,28 +1566,28 @@ export default function App() {
                             className={cn(
                               "w-full flex items-center justify-between p-4 rounded-2xl border transition-all group/item",
                               selectedLinkedPromptIds.includes(p.id!) 
-                                ? "bg-emerald-400/10 border-emerald-400/50" 
-                                : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+                                ? "bg-accent/10 border-accent/50" 
+                                : "bg-ink/5 border-ink/10 hover:bg-ink/10 hover:border-ink/20"
                             )}
                           >
                             <div className="flex items-center gap-4">
                               <div className={cn(
                                 "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
-                                p.type === 'video' ? "bg-violet-500/20 text-violet-400" : "bg-orange-500/20 text-orange-400"
+                                p.type === 'video' ? "bg-chip-video/20 text-chip-video-text" : "bg-chip-image/20 text-chip-image-text"
                               )}>
                                 {p.type === 'video' ? <Loader2 size={24} /> : <ImageIcon size={24} />}
                               </div>
                               <div className="text-left">
-                                <div className="text-xs font-bold text-white group-hover/item:text-emerald-400 transition-colors line-clamp-1">
+                                <div className="text-xs font-bold text-ink group-hover/item:text-accent transition-colors line-clamp-1">
                                   {p.title}
                                 </div>
-                                <div className="text-[10px] text-white/30 uppercase tracking-widest font-bold mt-1">
+                                <div className="text-[10px] text-ink/30 uppercase tracking-widest font-bold mt-1">
                                   {p.category || 'General'} • {p.type === 'video' ? 'Video' : 'Image'}
                                 </div>
                               </div>
                             </div>
                             {selectedLinkedPromptIds.includes(p.id!) && (
-                              <div className="w-6 h-6 bg-emerald-400 rounded-full flex items-center justify-center text-black">
+                              <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center text-accent-ink">
                                 <Check size={14} strokeWidth={3} />
                               </div>
                             )}
@@ -1596,10 +1596,10 @@ export default function App() {
                     </div>
 
                     {selectedLinkedPromptIds.length > 0 && (
-                      <div className="p-6 border-t border-white/10 bg-[#0a0a0a] animate-in slide-in-from-bottom-4 duration-300">
+                      <div className="p-6 border-t border-ink/10 bg-surface animate-in slide-in-from-bottom-4 duration-300">
                         <button
                           onClick={() => setModalView('form')}
-                          className="w-full py-4 bg-emerald-400 text-black rounded-2xl font-bold hover:bg-emerald-300 transition-all active:scale-95 shadow-xl shadow-emerald-400/20 flex items-center justify-center gap-2"
+                          className="w-full py-4 bg-accent text-accent-ink rounded-2xl font-bold hover:bg-accent-hover transition-all active:scale-95 shadow-xl shadow-accent/20 flex items-center justify-center gap-2"
                         >
                           <Check size={20} />
                           {t.apply} ({selectedLinkedPromptIds.length})
@@ -1622,11 +1622,11 @@ export default function App() {
                             referrerPolicy="no-referrer"
                           />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/upload:opacity-100 transition-opacity flex items-center justify-center">
-                            <Upload className="text-white" size={48} />
+                            <Upload className="text-ink" size={48} />
                           </div>
                         </>
                       ) : (
-                        <div className="flex flex-col items-center gap-4 text-white/20 group-hover/upload:text-emerald-400 transition-colors">
+                        <div className="flex flex-col items-center gap-4 text-ink/20 group-hover/upload:text-accent transition-colors">
                           <Upload size={64} />
                           <span className="text-sm font-bold uppercase tracking-widest">{t.uploadImage}</span>
                           <span className="text-[10px] opacity-50">PNG, JPG</span>
@@ -1649,7 +1649,7 @@ export default function App() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="flex flex-col items-center text-white/10">
+                        <div className="flex flex-col items-center text-ink/10">
                           <ImageIcon size={80} />
                           <span className="text-xs uppercase tracking-widest mt-4">No Preview Available</span>
                         </div>
@@ -1659,7 +1659,7 @@ export default function App() {
                 </div>
 
                 {/* Info Side */}
-                <div className="flex-[1.5] flex flex-col border-l border-white/10 bg-[#0a0a0a] overflow-hidden relative">
+                <div className="flex-[1.5] flex flex-col border-l border-ink/10 bg-surface overflow-hidden relative">
                   <form 
                     id="prompt-form"
                     onSubmit={handleSavePrompt}
@@ -1667,7 +1667,7 @@ export default function App() {
                     className="flex flex-col h-full overflow-hidden"
                   >
                     {/* Fixed Header */}
-                    <div className="px-8 py-6 border-b border-white/10 shrink-0 bg-[#0a0a0a] z-10">
+                    <div className="px-8 py-6 border-b border-ink/10 shrink-0 bg-surface z-10">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                         {(editingPrompt || (isModalOpen && !viewingPrompt)) ? (
@@ -1677,13 +1677,13 @@ export default function App() {
                                 <select 
                                   name="category" 
                                   defaultValue={editingPrompt?.category || 'Outdoor'}
-                                  className="w-full bg-white/5 text-white/80 px-4 py-2.5 rounded-xl text-xs font-medium focus:outline-none border border-white/10 focus:border-emerald-400/50 appearance-none cursor-pointer hover:bg-white/10 transition-all"
+                                  className="w-full bg-ink/5 text-ink/80 px-4 py-2.5 rounded-xl text-xs font-medium focus:outline-none border border-ink/10 focus:border-accent/50 appearance-none cursor-pointer hover:bg-ink/10 transition-all"
                                 >
                                   {categories.map(c => (
-                                    <option key={c} value={c} className="bg-[#0a0a0a] text-white">{c}</option>
+                                    <option key={c} value={c} className="bg-surface text-ink">{c}</option>
                                   ))}
                                 </select>
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-ink/30">
                                   <Filter size={14} />
                                 </div>
                               </div>
@@ -1693,8 +1693,8 @@ export default function App() {
                                 className={cn(
                                   "p-2.5 border rounded-xl transition-all",
                                   showNewCategoryInput 
-                                    ? "bg-emerald-400 border-emerald-400 text-black" 
-                                    : "bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10"
+                                    ? "bg-accent border-accent text-accent-ink" 
+                                    : "bg-ink/5 border-ink/10 text-ink/40 hover:text-ink hover:bg-ink/10"
                                 )}
                               >
                                 <Plus size={18} />
@@ -1703,8 +1703,8 @@ export default function App() {
 
                             {/* Type Toggle */}
                             <div className="space-y-2">
-                              <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/40">{t.type}</h4>
-                              <div className="flex p-1 bg-white/5 rounded-xl border border-white/10 w-fit">
+                              <h4 className="text-[10px] font-bold uppercase tracking-widest text-ink/40">{t.type}</h4>
+                              <div className="flex p-1 bg-ink/5 rounded-xl border border-ink/10 w-fit">
                                 <label className="relative cursor-pointer">
                                   <input 
                                     type="radio" 
@@ -1713,7 +1713,7 @@ export default function App() {
                                     defaultChecked={!editingPrompt || editingPrompt.type === 'image'} 
                                     className="peer sr-only"
                                   />
-                                  <div className="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all peer-checked:bg-orange-500 peer-checked:text-black text-white/40 hover:text-white">
+                                  <div className="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all peer-checked:bg-chip-image peer-checked:text-chip-image-text text-ink/40 hover:text-ink">
                                     Image
                                   </div>
                                 </label>
@@ -1725,7 +1725,7 @@ export default function App() {
                                     defaultChecked={editingPrompt?.type === 'video'} 
                                     className="peer sr-only"
                                   />
-                                  <div className="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all peer-checked:bg-purple-500 peer-checked:text-black text-white/40 hover:text-white">
+                                  <div className="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all peer-checked:bg-chip-video peer-checked:text-chip-video-text text-ink/40 hover:text-ink">
                                     Video
                                   </div>
                                 </label>
@@ -1734,21 +1734,21 @@ export default function App() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
-                            <span className="inline-block px-3 py-1 bg-emerald-400/10 text-emerald-400 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                            <span className="inline-block px-3 py-1 bg-accent/10 text-accent rounded-full text-[10px] font-bold uppercase tracking-widest">
                               {viewingPrompt?.category || t.all}
                             </span>
-                            <div className="w-[1px] h-3 bg-white/10" />
+                            <div className="w-[1px] h-3 bg-ink/10" />
                             <span className={cn(
                               "inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
                               viewingPrompt?.type === 'video' 
-                                ? "bg-violet-500/20 text-violet-300 border border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.2)]" 
-                                : "bg-orange-500/10 text-orange-400 border border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.15)]"
+                                ? "bg-chip-video/20 text-chip-video-text border border-chip-video/30 shadow-[0_0_10px_rgba(203,191,255,0.25)]" 
+                                : "bg-chip-image/10 text-chip-image-text border border-chip-image/20 shadow-[0_0_10px_rgba(255,199,147,0.2)]"
                             )}>
                               {viewingPrompt?.type === 'video' ? 'Video' : 'Image'}
                             </span>
-                            <div className="w-[1px] h-3 bg-white/10" />
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-white/30">
-                              <UserIcon size={12} className="text-emerald-400/50" />
+                            <div className="w-[1px] h-3 bg-ink/10" />
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-ink/30">
+                              <UserIcon size={12} className="text-accent/50" />
                               <span>{viewingPrompt?.authorName || '—'}</span>
                             </div>
                           </div>
@@ -1762,7 +1762,7 @@ export default function App() {
                             value={newCategoryName}
                             onChange={(e) => setNewCategoryName(e.target.value)}
                             placeholder={t.newCategory}
-                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-emerald-400 transition-colors"
+                            className="flex-1 bg-ink/5 border border-ink/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-accent transition-colors"
                           />
                           <button
                             type="button"
@@ -1779,14 +1779,14 @@ export default function App() {
                                 }
                               }
                             }}
-                            className="px-4 py-2 bg-emerald-400 text-black rounded-xl text-xs font-bold hover:bg-emerald-300 transition-all"
+                            className="px-4 py-2 bg-accent text-accent-ink rounded-xl text-xs font-bold hover:bg-accent-hover transition-all"
                           >
                             {t.addPrompt}
                           </button>
                           <button
                             type="button"
                             onClick={() => setShowNewCategoryInput(false)}
-                            className="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-white/40"
+                            className="p-2 bg-ink/5 hover:bg-ink/10 rounded-xl text-ink/40"
                           >
                             <X size={16} />
                           </button>
@@ -1800,23 +1800,23 @@ export default function App() {
                             required
                             defaultValue={editingPrompt?.title}
                             placeholder={t.title}
-                            className="text-2xl font-extrabold bg-transparent border-b border-white/10 w-full focus:outline-none focus:border-emerald-400 transition-colors pb-1"
+                            className="text-2xl font-extrabold bg-transparent border-b border-ink/10 w-full focus:outline-none focus:border-accent transition-colors pb-1"
                           />
                         ) : (
                           <div className="space-y-2">
-                            <h2 className="text-3xl font-extrabold leading-tight tracking-tight text-white">{viewingPrompt?.title}</h2>
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-white/30 uppercase tracking-widest font-bold">
+                            <h2 className="text-3xl font-display font-extrabold leading-tight tracking-tight text-ink">{viewingPrompt?.title}</h2>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-ink/30 uppercase tracking-widest font-bold">
                               <div className="flex items-center gap-1.5">
-                                <Calendar size={12} className="text-emerald-400/50" />
+                                <Calendar size={12} className="text-accent/50" />
                                 <span>{t.created}: {formatDate(viewingPrompt?.createdAt)}</span>
                               </div>
                               <div className="flex items-center gap-1.5">
-                                <Loader2 size={12} className="text-violet-400/50" />
+                                <Loader2 size={12} className="text-chip-video-text/50" />
                                 <span>{t.lastUpdate}: {formatDate(viewingPrompt?.updatedAt)}</span>
                               </div>
                               {typeof viewingPrompt?.copyCount === 'number' && viewingPrompt.copyCount > 0 && (
                                 <div className="flex items-center gap-1.5">
-                                  <Copy size={12} className="text-emerald-400/50" />
+                                  <Copy size={12} className="text-accent/50" />
                                   <span>{t.copiedLabel}: {viewingPrompt.copyCount}</span>
                                 </div>
                               )}
@@ -1830,7 +1830,7 @@ export default function App() {
                   {/* Scrollable Content */}
                     <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8 custom-scrollbar">
                       <div className="space-y-2">
-                        <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">{t.thePrompt}</h4>
+                        <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink/30">{t.thePrompt}</h4>
                         <div className="relative group">
                           {(editingPrompt || (isModalOpen && !viewingPrompt)) ? (
                             <textarea 
@@ -1839,16 +1839,16 @@ export default function App() {
                               rows={10}
                               defaultValue={editingPrompt?.content}
                               placeholder={t.content}
-                              className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-sm text-white/80 whitespace-pre-wrap font-mono leading-relaxed focus:outline-none focus:border-emerald-400 transition-colors resize-none"
+                              className="w-full bg-ink/5 border border-ink/10 rounded-2xl p-6 text-sm text-ink/80 whitespace-pre-wrap font-mono leading-relaxed focus:outline-none focus:border-accent transition-colors resize-none"
                             />
                           ) : (
-                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-sm text-white/80 leading-relaxed selection:bg-emerald-400/30 relative group">
+                            <div className="bg-ink/5 border border-ink/10 rounded-2xl p-6 text-sm text-ink/80 leading-relaxed selection:bg-accent/30 relative group">
                               <MarkdownPrompt content={viewingPrompt?.content || ''} values={placeholderValues} />
                               
                               <button 
                                 type="button"
                                 onClick={() => viewingPrompt && copyToClipboard(viewingPrompt.content, viewingPrompt.id)}
-                                className="absolute top-4 right-4 p-2.5 bg-white/10 hover:bg-emerald-400 hover:text-black rounded-xl transition-all opacity-0 group-hover:opacity-100 shadow-lg"
+                                className="absolute top-4 right-4 p-2.5 bg-ink/10 hover:bg-accent hover:text-accent-ink rounded-xl transition-all opacity-0 group-hover:opacity-100 shadow-lg"
                               >
                                 <Copy size={18} />
                               </button>
@@ -1859,11 +1859,11 @@ export default function App() {
 
                       {(!editingPrompt && viewingPrompt && Object.keys(placeholderValues).length > 0) && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                          <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">{t.placeholders}</h4>
+                          <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink/30">{t.placeholders}</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {Object.keys(placeholderValues).map(key => (
                               <div key={key} className="space-y-1.5">
-                                <label className="text-[10px] font-bold uppercase tracking-widest text-white/20 ml-1">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-ink/20 ml-1">
                                   {key}
                                 </label>
                                 <input
@@ -1874,7 +1874,7 @@ export default function App() {
                                     setPlaceholderValues(prev => ({ ...prev, [key]: e.target.value }));
                                   }}
                                   placeholder={`Enter ${key}...`}
-                                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-[#ff2d55] transition-colors"
+                                  className="w-full bg-ink/5 border border-ink/10 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-ph transition-colors"
                                 />
                               </div>
                             ))}
@@ -1884,22 +1884,22 @@ export default function App() {
 
                       {(editingPrompt || (isModalOpen && !viewingPrompt)) && (
                         <div className="space-y-2">
-                          <h4 className="text-xs font-bold uppercase tracking-widest text-white/40">{t.tags}</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-ink/40">{t.tags}</h4>
                           <input 
                             name="tags"
                             defaultValue={editingPrompt?.tags?.join(', ')}
                             placeholder="tag1, tag2, tag3..."
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-emerald-400 transition-colors"
+                            className="w-full bg-ink/5 border border-ink/10 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-accent transition-colors"
                           />
                         </div>
                       )}
 
                       {(!editingPrompt && !(isModalOpen && !viewingPrompt)) && viewingPrompt?.tags && viewingPrompt.tags.length > 0 && (
                         <div className="space-y-2">
-                          <h4 className="text-xs font-bold uppercase tracking-widest text-white/40">{t.tags}</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-ink/40">{t.tags}</h4>
                           <div className="flex flex-wrap gap-2">
                             {viewingPrompt.tags.map((tag, idx) => (
-                              <span key={idx} className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/60">
+                              <span key={idx} className="px-3 py-1 bg-ink/5 border border-ink/10 rounded-full text-xs text-ink/60">
                                 #{tag}
                               </span>
                             ))}
@@ -1909,33 +1909,33 @@ export default function App() {
 
                       {(editingPrompt || (isModalOpen && !viewingPrompt)) && (
                         <div className="space-y-2">
-                          <h4 className="text-xs font-bold uppercase tracking-widest text-white/40">{t.exampleUrl}</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-ink/40">{t.exampleUrl}</h4>
                           <input 
                             name="exampleUrl"
                             defaultValue={editingPrompt?.exampleUrl}
                             placeholder="https://..."
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-emerald-400 transition-colors"
+                            className="w-full bg-ink/5 border border-ink/10 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-accent transition-colors"
                           />
                         </div>
                       )}
 
                       {(editingPrompt || (isModalOpen && !viewingPrompt)) && (
                         <div className="space-y-2">
-                          <h4 className="text-xs font-bold uppercase tracking-widest text-white/40">{t.linkedPrompt}</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-ink/40">{t.linkedPrompt}</h4>
                           <div className="space-y-2">
                             <button
                               type="button"
                               onClick={() => setModalView('link')}
-                              className="w-full flex items-center justify-between px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white/80 hover:bg-white/10 transition-all"
+                              className="w-full flex items-center justify-between px-4 py-2.5 bg-ink/5 border border-ink/10 rounded-xl text-xs text-ink/80 hover:bg-ink/10 transition-all"
                             >
                               <span>{t.addLinkedPrompt}</span>
                               <div className="flex items-center gap-2">
                                 {selectedLinkedPromptIds.length > 0 && (
-                                  <span className="bg-emerald-400 text-black px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                  <span className="bg-accent text-accent-ink px-2 py-0.5 rounded-full text-[10px] font-bold">
                                     {selectedLinkedPromptIds.length}
                                   </span>
                                 )}
-                                <ChevronRight size={14} className="text-white/30" />
+                                <ChevronRight size={14} className="text-ink/30" />
                               </div>
                             </button>
                             
@@ -1945,12 +1945,12 @@ export default function App() {
                                   const p = prompts.find(prompt => prompt.id === id);
                                   if (!p) return null;
                                   return (
-                                    <div key={id} className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[10px] text-white/60">
+                                    <div key={id} className="flex items-center gap-2 px-3 py-1.5 bg-ink/5 border border-ink/10 rounded-lg text-[10px] text-ink/60">
                                       <span className="truncate max-w-[120px]">{p.title}</span>
                                       <button
                                         type="button"
                                         onClick={() => setSelectedLinkedPromptIds(prev => prev.filter(pid => pid !== id))}
-                                        className="hover:text-red-400 transition-colors"
+                                        className="hover:text-danger transition-colors"
                                       >
                                         <X size={12} />
                                       </button>
@@ -1965,7 +1965,7 @@ export default function App() {
 
                       {(!editingPrompt && !(isModalOpen && !viewingPrompt)) && viewingPrompt?.linkedPromptIds && viewingPrompt.linkedPromptIds.length > 0 && (
                         <div className="space-y-2">
-                          <h4 className="text-xs font-bold uppercase tracking-widest text-white/40">{t.linkedPrompt}</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-ink/40">{t.linkedPrompt}</h4>
                           <div className="grid grid-cols-1 gap-2">
                             {viewingPrompt.linkedPromptIds.map(id => {
                               const linked = prompts.find(p => p.id === id);
@@ -1975,25 +1975,25 @@ export default function App() {
                                   key={id}
                                   type="button"
                                   onClick={() => setViewingPromptId(linked.id!)}
-                                  className="w-full flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group/link"
+                                  className="w-full flex items-center justify-between p-4 bg-ink/5 border border-ink/10 rounded-2xl hover:bg-ink/10 transition-all group/link"
                                 >
                                   <div className="flex items-center gap-3">
                                     <div className={cn(
                                       "w-10 h-10 rounded-lg flex items-center justify-center",
-                                      linked.type === 'video' ? "bg-violet-500/20 text-violet-400" : "bg-orange-500/20 text-orange-400"
+                                      linked.type === 'video' ? "bg-chip-video/20 text-chip-video-text" : "bg-chip-image/20 text-chip-image-text"
                                     )}>
                                       {linked.type === 'video' ? <Loader2 size={20} /> : <ImageIcon size={20} />}
                                     </div>
                                     <div className="text-left">
-                                      <div className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+                                      <div className="text-[10px] font-bold uppercase tracking-widest text-ink/30">
                                         {linked.type === 'video' ? t.switchToVideo : t.switchToImage}
                                       </div>
-                                      <div className="text-sm font-bold text-white group-hover/link:text-emerald-400 transition-colors line-clamp-1">
+                                      <div className="text-sm font-bold text-ink group-hover/link:text-accent transition-colors line-clamp-1">
                                         {linked.title}
                                       </div>
                                     </div>
                                   </div>
-                                  <ChevronRight size={18} className="text-white/20 group-hover/link:text-emerald-400 group-hover/link:translate-x-1 transition-all" />
+                                  <ChevronRight size={18} className="text-ink/20 group-hover/link:text-accent group-hover/link:translate-x-1 transition-all" />
                                 </button>
                               );
                             })}
@@ -2003,13 +2003,13 @@ export default function App() {
                     </div>
 
                     {/* Fixed Footer */}
-                    <div className="px-8 py-6 border-t border-white/10 shrink-0 bg-[#0a0a0a] z-10 flex gap-3">
+                    <div className="px-8 py-6 border-t border-ink/10 shrink-0 bg-surface z-10 flex gap-3">
                       {(editingPrompt || (isModalOpen && !viewingPrompt)) ? (
                         <>
                           <button 
                             type="submit"
                             disabled={isUploading}
-                            className="flex-[2] py-3.5 bg-emerald-400 text-black rounded-2xl font-bold hover:bg-emerald-300 transition-all active:scale-95 shadow-xl shadow-emerald-400/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                            className="flex-[2] py-3.5 bg-accent text-accent-ink rounded-2xl font-bold hover:bg-accent-hover transition-all active:scale-95 shadow-xl shadow-accent/20 disabled:opacity-50 flex items-center justify-center gap-2"
                           >
                             {isUploading && <Loader2 className="animate-spin" size={18} />}
                             {isUploading ? t.uploading : (editingPrompt ? t.update : t.createPrompt)}
@@ -2026,7 +2026,7 @@ export default function App() {
                                 closeModal();
                               }
                             }}
-                            className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 rounded-2xl font-bold transition-all active:scale-95 text-white/60"
+                            className="flex-1 py-3.5 bg-ink/5 hover:bg-ink/10 rounded-2xl font-bold transition-all active:scale-95 text-ink/60"
                           >
                             {t.cancel}
                           </button>
@@ -2035,7 +2035,7 @@ export default function App() {
                             <button 
                               type="button"
                               onClick={() => setShowDeleteConfirm(true)}
-                              className="w-14 h-14 shrink-0 flex items-center justify-center bg-white/5 hover:bg-red-500/20 rounded-2xl text-white/40 hover:text-red-400 transition-all active:scale-95 border border-white/10 hover:border-red-500/30"
+                              className="w-14 h-14 shrink-0 flex items-center justify-center bg-ink/5 hover:bg-danger/20 rounded-2xl text-ink/40 hover:text-danger transition-all active:scale-95 border border-ink/10 hover:border-danger/30"
                             >
                               <Trash2 size={20} />
                             </button>
@@ -2046,7 +2046,7 @@ export default function App() {
                           <button 
                             type="button"
                             onClick={() => viewingPrompt && copyToClipboard(viewingPrompt.content, viewingPrompt.id)}
-                            className="flex-1 flex items-center justify-center gap-3 py-4 bg-emerald-400 text-black rounded-2xl font-bold hover:bg-emerald-300 transition-all active:scale-95 shadow-xl shadow-emerald-400/20"
+                            className="flex-1 flex items-center justify-center gap-3 py-4 bg-accent text-accent-ink rounded-2xl font-bold hover:bg-accent-hover transition-all active:scale-95 shadow-xl shadow-accent/20"
                           >
                             <Copy size={20} />
                             <span className="truncate">{t.copyToClipboard}</span>
@@ -2060,7 +2060,7 @@ export default function App() {
                                 e.stopPropagation();
                                 setEditingPrompt(viewingPrompt);
                               }}
-                              className="w-14 h-14 shrink-0 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-2xl text-white/60 hover:text-white transition-all active:scale-95"
+                              className="w-14 h-14 shrink-0 flex items-center justify-center bg-ink/10 hover:bg-ink/20 rounded-2xl text-ink/60 hover:text-ink transition-all active:scale-95"
                             >
                               <Edit2 size={20} />
                             </button>
@@ -2075,7 +2075,7 @@ export default function App() {
                                 handleDuplicatePrompt(viewingPrompt);
                               }}
                               title={t.duplicate}
-                              className="w-14 h-14 shrink-0 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-2xl text-white/60 hover:text-white transition-all active:scale-95"
+                              className="w-14 h-14 shrink-0 flex items-center justify-center bg-ink/10 hover:bg-ink/20 rounded-2xl text-ink/60 hover:text-ink transition-all active:scale-95"
                             >
                               <CopyPlus size={20} />
                             </button>
@@ -2101,17 +2101,17 @@ export default function App() {
                           initial={{ scale: 0.9, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           exit={{ scale: 0.9, opacity: 0 }}
-                          className="bg-[#141414] border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
+                          className="bg-surface-2 border border-ink/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
                         >
-                          <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                          <div className="w-16 h-16 bg-danger/10 text-danger rounded-full flex items-center justify-center mx-auto mb-6">
                             <Trash2 size={32} />
                           </div>
                           <h3 className="text-xl font-bold mb-2">{t.deleteConfirm}</h3>
-                          <p className="text-white/40 text-sm mb-8">This action cannot be undone. The prompt will be permanently removed.</p>
+                          <p className="text-ink/40 text-sm mb-8">This action cannot be undone. The prompt will be permanently removed.</p>
                           <div className="flex gap-3">
                             <button 
                               onClick={() => setShowDeleteConfirm(false)}
-                              className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition-all"
+                              className="flex-1 py-3 bg-ink/5 hover:bg-ink/10 rounded-xl font-bold transition-all"
                             >
                               {t.cancel}
                             </button>
@@ -2125,7 +2125,7 @@ export default function App() {
                                   setIsModalOpen(false);
                                 }
                               }}
-                              className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
+                              className="flex-1 py-3 bg-danger text-ink rounded-xl font-bold hover:bg-danger-hover transition-all shadow-lg shadow-danger/20"
                             >
                               Delete
                             </button>
@@ -2139,7 +2139,7 @@ export default function App() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="text-white/20 text-[10px] uppercase tracking-[0.2em] font-medium"
+                className="text-ink/20 text-[10px] uppercase tracking-[0.2em] font-medium"
               >
                 {t.closeInstruction}
               </motion.p>
@@ -2163,13 +2163,13 @@ export default function App() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#0a0a0a] border border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[70vh]"
+              className="bg-surface border border-ink/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[70vh]"
             >
-              <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-white">{t.manageCategories}</h3>
+              <div className="px-6 py-4 border-b border-ink/10 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-ink">{t.manageCategories}</h3>
                 <button 
                   onClick={() => closeModal()}
-                  className="p-2 hover:bg-white/10 rounded-full text-white/40 hover:text-white transition-all"
+                  className="p-2 hover:bg-ink/10 rounded-full text-ink/40 hover:text-ink transition-all"
                 >
                   <X size={20} />
                 </button>
@@ -2179,7 +2179,7 @@ export default function App() {
                 {categories.map(cat => (
                   <div 
                     key={cat}
-                    className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-2xl group"
+                    className="flex items-center justify-between p-3 bg-ink/5 border border-ink/10 rounded-2xl group"
                   >
                     {renamingCategory === cat ? (
                       <div className="flex-1 flex items-center gap-2">
@@ -2187,7 +2187,7 @@ export default function App() {
                           type="text"
                           value={renameValue}
                           onChange={(e) => setRenameValue(e.target.value)}
-                          className="flex-1 bg-white/10 border border-emerald-400/50 rounded-lg px-3 py-1 text-sm text-white focus:outline-none"
+                          className="flex-1 bg-ink/10 border border-accent/50 rounded-lg px-3 py-1 text-sm text-ink focus:outline-none"
                           autoFocus
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleRenameCategory(cat, renameValue);
@@ -2196,34 +2196,34 @@ export default function App() {
                         />
                         <button 
                           onClick={() => handleRenameCategory(cat, renameValue)}
-                          className="p-1.5 bg-emerald-400 text-black rounded-lg hover:bg-emerald-300 transition-all"
+                          className="p-1.5 bg-accent text-accent-ink rounded-lg hover:bg-accent-hover transition-all"
                         >
                           <Check size={16} />
                         </button>
                         <button 
                           onClick={() => setRenamingCategory(null)}
-                          className="p-1.5 bg-white/10 text-white/40 rounded-lg hover:text-white transition-all"
+                          className="p-1.5 bg-ink/10 text-ink/40 rounded-lg hover:text-ink transition-all"
                         >
                           <X size={16} />
                         </button>
                       </div>
                     ) : (
                       <>
-                        <span className="text-sm font-medium text-white/80">{cat}</span>
+                        <span className="text-sm font-medium text-ink/80">{cat}</span>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
                             onClick={() => {
                               setRenamingCategory(cat);
                               setRenameValue(cat);
                             }}
-                            className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-all"
+                            className="p-2 hover:bg-ink/10 rounded-lg text-ink/40 hover:text-accent transition-all"
                             title={t.rename}
                           >
                             <Edit2 size={16} />
                           </button>
                           <button 
                             onClick={() => handleDeleteCategory(cat)}
-                            className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-red-400 transition-all"
+                            className="p-2 hover:bg-ink/10 rounded-lg text-ink/40 hover:text-danger transition-all"
                             title={t.deleteCategory}
                           >
                             <Trash2 size={16} />
@@ -2252,32 +2252,32 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#141414] border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
+              className="bg-surface-2 border border-ink/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
             >
-              <div className="w-16 h-16 bg-orange-500/10 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-16 h-16 bg-chip-image/10 text-chip-image-text rounded-full flex items-center justify-center mx-auto mb-6">
                 <Edit2 size={32} />
               </div>
               <h3 className="text-xl font-bold mb-2">{t.unsavedChanges}</h3>
-              <p className="text-white/40 text-sm mb-8">{t.unsavedChangesSub}</p>
+              <p className="text-ink/40 text-sm mb-8">{t.unsavedChangesSub}</p>
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={() => {
                     const form = document.getElementById('prompt-form') as HTMLFormElement;
                     if (form) form.requestSubmit();
                   }}
-                  className="w-full py-3 bg-emerald-400 text-black rounded-xl font-bold hover:bg-emerald-300 transition-all"
+                  className="w-full py-3 bg-accent text-accent-ink rounded-xl font-bold hover:bg-accent-hover transition-all"
                 >
                   {t.apply}
                 </button>
                 <button 
                   onClick={closeModal}
-                  className="w-full py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition-all text-white/60"
+                  className="w-full py-3 bg-ink/5 hover:bg-ink/10 rounded-xl font-bold transition-all text-ink/60"
                 >
                   {t.discard}
                 </button>
                 <button 
                   onClick={() => setShowUnsavedConfirm(false)}
-                  className="w-full py-3 bg-transparent hover:bg-white/5 rounded-xl font-medium transition-all text-white/40"
+                  className="w-full py-3 bg-transparent hover:bg-ink/5 rounded-xl font-medium transition-all text-ink/40"
                 >
                   {t.cancel}
                 </button>
@@ -2288,18 +2288,18 @@ export default function App() {
       </AnimatePresence>
 
       {/* Footer */}
-      <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-white/10 mt-12 relative z-10">
+      <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-ink/10 mt-12 relative z-10">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3 opacity-50">
-            <div className="w-6 h-6 bg-white/20 rounded flex items-center justify-center font-bold text-black text-xs">
+            <div className="w-6 h-6 bg-ink/20 rounded flex items-center justify-center font-display font-bold text-bg text-xs">
               C
             </div>
             <span className="text-sm font-medium">CREO Prompt Library &copy; 2026</span>
           </div>
-          <div className="flex items-center gap-6 text-sm text-white/40">
-            <a href="#" className="hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms</a>
-            <a href="#" className="hover:text-white transition-colors">Support</a>
+          <div className="flex items-center gap-6 text-sm text-ink/40">
+            <a href="#" className="hover:text-ink transition-colors">Privacy</a>
+            <a href="#" className="hover:text-ink transition-colors">Terms</a>
+            <a href="#" className="hover:text-ink transition-colors">Support</a>
           </div>
         </div>
       </footer>
