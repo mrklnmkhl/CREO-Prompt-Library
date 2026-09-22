@@ -13,7 +13,8 @@ import {
   setDoc,
   getDocFromServer,
   where,
-  getDocs
+  getDocs,
+  increment
 } from 'firebase/firestore';
 import { 
   signInWithPopup, 
@@ -54,12 +55,19 @@ import {
   Tag,
   Calendar,
   Pencil,
-  User as UserIcon
+  User as UserIcon,
+  Download,
+  FileUp,
+  CopyPlus,
+  ArrowUpDown,
+  CheckSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster, toast } from 'sonner';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import ReactMarkdown from 'react-markdown';
+import remarkHighlightPlaceholders from './utils/highlightPlaceholders';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -128,7 +136,25 @@ const TRANSLATIONS = {
     deleteCategory: "Delete Category",
     manageCategories: "Manage Categories",
     rename: "Rename",
-    save: "Save"
+    save: "Save",
+    sortNewest: "Newest",
+    sortOldest: "Oldest",
+    sortAlphabetical: "A–Z",
+    sortMostCopied: "Most copied",
+    exportPrompts: "Export",
+    importPrompts: "Import",
+    importSuccess: "Imported prompts",
+    importFail: "Import failed. Check the file format.",
+    exportSuccess: "Library exported",
+    duplicate: "Duplicate",
+    duplicateSuccess: "Prompt duplicated",
+    copySuffix: "(copy)",
+    selectMode: "Select",
+    selectedCount: "selected",
+    deleteSelected: "Delete",
+    changeCategory: "Change category",
+    bulkDeleteConfirm: "Delete the selected prompts?",
+    copiedLabel: "Copied"
   },
   ru: {
     search: "Поиск",
@@ -190,7 +216,25 @@ const TRANSLATIONS = {
     deleteCategory: "Удалить категорию",
     manageCategories: "Управление категориями",
     rename: "Переименовать",
-    save: "Сохранить"
+    save: "Сохранить",
+    sortNewest: "Сначала новые",
+    sortOldest: "Сначала старые",
+    sortAlphabetical: "А–Я",
+    sortMostCopied: "Часто копируемые",
+    exportPrompts: "Экспорт",
+    importPrompts: "Импорт",
+    importSuccess: "Промпты импортированы",
+    importFail: "Ошибка импорта. Проверьте формат файла.",
+    exportSuccess: "Библиотека экспортирована",
+    duplicate: "Дублировать",
+    duplicateSuccess: "Промпт продублирован",
+    copySuffix: "(копия)",
+    selectMode: "Выбрать",
+    selectedCount: "выбрано",
+    deleteSelected: "Удалить",
+    changeCategory: "Изменить категорию",
+    bulkDeleteConfirm: "Удалить выбранные промпты?",
+    copiedLabel: "Скопировано"
   }
 };
 
@@ -231,23 +275,71 @@ const HighlightedPrompt = memo(({ content, values = {} }: { content: string; val
   );
 });
 
-const PromptCard = memo(({ 
-  prompt, 
-  viewMode, 
-  user, 
-  userProfile, 
-  toggleFavorite, 
-  setViewingPromptId, 
+const MarkdownPrompt = memo(({ content, values = {} }: { content: string; values?: Record<string, string> }) => {
+  return (
+    <div className="prose-sm max-w-none">
+      <ReactMarkdown
+        remarkPlugins={[remarkHighlightPlaceholders]}
+        components={{
+          p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+          strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+          em: ({ children }) => <em className="italic text-white/70">{children}</em>,
+          ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1">{children}</ol>,
+          li: ({ children }) => <li className="text-white/80">{children}</li>,
+          code: ({ children }) => <code className="bg-white/10 px-1.5 py-0.5 rounded text-emerald-300 text-xs">{children}</code>,
+          h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-white">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-white">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-sm font-bold mb-2 text-white">{children}</h3>,
+          a: ({ children, href }) => (
+            <a href={href} target="_blank" rel="noreferrer" className="text-emerald-400 underline">
+              {children}
+            </a>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-2 border-emerald-400/40 pl-4 italic text-white/60 mb-3">{children}</blockquote>
+          ),
+          mark: (props: any) => {
+            const key = props['data-placeholder'];
+            return (
+              <span className="text-[#ff2d55] font-bold bg-[#ff2d55]/10 px-0.5 rounded">
+                {values[key] || props.children}
+              </span>
+            );
+          },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+});
+
+const PromptCard = memo(({
+  prompt,
+  viewMode,
+  user,
+  userProfile,
+  toggleFavorite,
+  setViewingPromptId,
   copyToClipboard,
-  t 
-}: { 
-  prompt: Prompt; 
-  viewMode: 'grid' | 'list'; 
-  user: any; 
-  userProfile: UserProfile | null; 
-  toggleFavorite: (id: string) => void; 
-  setViewingPromptId: (id: string) => void; 
-  copyToClipboard: (text: string) => void;
+  onDuplicate,
+  isBulkMode,
+  isSelected,
+  onToggleSelect,
+  t
+}: {
+  prompt: Prompt;
+  viewMode: 'grid' | 'list';
+  user: any;
+  userProfile: UserProfile | null;
+  toggleFavorite: (id: string) => void;
+  setViewingPromptId: (id: string) => void;
+  copyToClipboard: (text: string, promptId?: string) => void;
+  onDuplicate: (prompt: Prompt) => void;
+  isBulkMode: boolean;
+  isSelected: boolean;
+  onToggleSelect: (id: string) => void;
   t: any;
 }) => {
   return (
@@ -256,22 +348,35 @@ const PromptCard = memo(({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.08 } }}
       transition={{ duration: 0.18, ease: "easeInOut" }}
+      onClick={isBulkMode ? () => onToggleSelect(prompt.id!) : undefined}
       className={cn(
-        "group relative bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:border-emerald-400/30 transition-colors duration-200 flex flex-col shadow-lg hover:shadow-emerald-400/5",
+        "group relative bg-white/5 border rounded-xl overflow-hidden transition-colors duration-200 flex flex-col shadow-lg",
+        isBulkMode ? "cursor-pointer" : "hover:border-emerald-400/30 hover:shadow-emerald-400/5",
+        isSelected ? "border-emerald-400/60 ring-2 ring-emerald-400/30" : "border-white/10",
         viewMode === 'list' && "flex flex-row h-48"
       )}
     >
+      {isBulkMode && (
+        <div className={cn(
+          "absolute top-3 left-3 z-30 w-6 h-6 rounded-md flex items-center justify-center border-2 transition-all",
+          isSelected ? "bg-emerald-400 border-emerald-400 text-black" : "bg-black/40 border-white/30 text-transparent"
+        )}>
+          <Check size={14} strokeWidth={3} />
+        </div>
+      )}
+
       {/* Preview Image */}
-      <div 
+      <div
         className={cn(
-          "relative bg-[#111111] overflow-hidden cursor-pointer shrink-0",
+          "relative bg-[#111111] overflow-hidden shrink-0",
+          isBulkMode ? "" : "cursor-pointer",
           viewMode === 'grid' ? "aspect-square" : "w-64 h-full"
         )}
-        onClick={() => setViewingPromptId(prompt.id!)}
+        onClick={isBulkMode ? undefined : () => setViewingPromptId(prompt.id!)}
       >
         {prompt.exampleUrl ? (
-          <img 
-            src={prompt.exampleUrl} 
+          <img
+            src={prompt.exampleUrl}
             alt={prompt.title}
             referrerPolicy="no-referrer"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -287,10 +392,10 @@ const PromptCard = memo(({
             <ExternalLink size={16} className="text-white" />
           </div>
         </div>
-        
+
         {/* Favorite Button */}
-        {user && (
-          <button 
+        {user && !isBulkMode && (
+          <button
             onClick={(e) => {
               e.stopPropagation();
               toggleFavorite(prompt.id!);
@@ -316,14 +421,23 @@ const PromptCard = memo(({
           <div className="w-[1px] h-3 bg-white/10" />
           <span className={cn(
             "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm",
-            prompt.type === 'video' 
-              ? "bg-violet-500/20 text-violet-300 border border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.2)]" 
+            prompt.type === 'video'
+              ? "bg-violet-500/20 text-violet-300 border border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.2)]"
               : "bg-orange-500/10 text-orange-400"
           )}>
             {prompt.type === 'video' ? 'Video' : 'Image'}
           </span>
+          {typeof prompt.copyCount === 'number' && prompt.copyCount > 0 && (
+            <>
+              <div className="w-[1px] h-3 bg-white/10 ml-auto" />
+              <span className="flex items-center gap-1 text-[9px] font-bold text-white/20">
+                <Copy size={9} />
+                {prompt.copyCount}
+              </span>
+            </>
+          )}
         </div>
-        
+
         <h3 className="text-base font-bold mb-1 line-clamp-1 group-hover:text-emerald-400 transition-colors">
           {prompt.title}
         </h3>
@@ -342,23 +456,37 @@ const PromptCard = memo(({
             )}
           </div>
         )}
-        
+
         <p className="text-xs text-white/40 line-clamp-2 mb-4 flex-1 leading-relaxed">
           <HighlightedPrompt content={prompt.content} />
         </p>
 
-        <div className="flex items-center gap-2 mt-auto">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              copyToClipboard(prompt.content);
-            }}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-medium transition-all active:scale-95"
-          >
-            <Copy size={14} />
-            <span>{t.copyPrompt}</span>
-          </button>
-        </div>
+        {!isBulkMode && (
+          <div className="flex items-center gap-2 mt-auto">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                copyToClipboard(prompt.content, prompt.id);
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-medium transition-all active:scale-95"
+            >
+              <Copy size={14} />
+              <span>{t.copyPrompt}</span>
+            </button>
+            {user && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate(prompt);
+                }}
+                title={t.duplicate}
+                className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-all active:scale-95"
+              >
+                <CopyPlus size={14} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -400,6 +528,12 @@ export default function App() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'alphabetical' | 'mostCopied'>('newest');
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const checkScroll = useCallback(() => {
     if (scrollContainerRef.current) {
@@ -665,9 +799,9 @@ export default function App() {
   };
 
   const filteredPrompts = useMemo(() => {
-    return prompts.filter(p => {
+    const filtered = prompts.filter(p => {
       const query = searchQuery.toLowerCase();
-      const matchesSearch = p.title.toLowerCase().includes(query) || 
+      const matchesSearch = p.title.toLowerCase().includes(query) ||
                             p.content.toLowerCase().includes(query) ||
                             (p.tags && p.tags.some(tag => tag.toLowerCase().includes(query)));
       const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
@@ -675,7 +809,21 @@ export default function App() {
       const matchesType = selectedTypeFilter === 'all' || p.type === selectedTypeFilter;
       return matchesSearch && matchesCategory && matchesFavorites && matchesType;
     });
-  }, [prompts, searchQuery, selectedCategory, showFavoritesOnly, userProfile, selectedTypeFilter]);
+
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'oldest':
+          return (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0);
+        case 'alphabetical':
+          return a.title.localeCompare(b.title);
+        case 'mostCopied':
+          return (b.copyCount ?? 0) - (a.copyCount ?? 0);
+        case 'newest':
+        default:
+          return (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0);
+      }
+    });
+  }, [prompts, searchQuery, selectedCategory, showFavoritesOnly, userProfile, selectedTypeFilter, sortBy]);
 
   const handleSavePrompt = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -764,7 +912,7 @@ export default function App() {
     }
   }, [t.promptDeleted, t.saveFail]);
 
-  const copyToClipboard = useCallback((text: string) => {
+  const copyToClipboard = useCallback((text: string, promptId?: string) => {
     let finalPrompt = text;
     // Only apply replacements if we are copying the content of the currently viewed prompt
     if (viewingPrompt && text === viewingPrompt.content) {
@@ -776,7 +924,122 @@ export default function App() {
     }
     navigator.clipboard.writeText(finalPrompt);
     toast.success(t.copySuccess);
+    if (promptId) {
+      updateDoc(doc(db, 'prompts', promptId), { copyCount: increment(1) }).catch((error) => {
+        console.error("Error incrementing copy count:", error);
+      });
+    }
   }, [viewingPrompt, placeholderValues, t.copySuccess]);
+
+  const handleDuplicatePrompt = useCallback(async (prompt: Prompt) => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, 'prompts'), {
+        title: `${prompt.title} ${t.copySuffix}`,
+        content: prompt.content,
+        category: prompt.category || '',
+        type: prompt.type,
+        tags: prompt.tags || [],
+        exampleUrl: prompt.exampleUrl || '',
+        linkedPromptIds: prompt.linkedPromptIds || [],
+        copyCount: 0,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        authorUid: user.uid,
+        authorName: userProfile?.displayName || user.displayName || user.email?.split('@')[0] || 'Unknown'
+      });
+      toast.success(t.duplicateSuccess);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'prompts');
+      toast.error(t.saveFail);
+    }
+  }, [user, userProfile, t.copySuffix, t.duplicateSuccess, t.saveFail]);
+
+  const toggleBulkSelect = useCallback((id: string) => {
+    setSelectedBulkIds(prev => prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]);
+  }, []);
+
+  const exitBulkMode = useCallback(() => {
+    setIsBulkMode(false);
+    setSelectedBulkIds([]);
+  }, []);
+
+  const handleBulkDelete = useCallback(async () => {
+    try {
+      await Promise.all(selectedBulkIds.map(id => deleteDoc(doc(db, 'prompts', id))));
+      toast.success(t.promptDeleted);
+      setShowBulkDeleteConfirm(false);
+      exitBulkMode();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, 'prompts');
+      toast.error(t.saveFail);
+    }
+  }, [selectedBulkIds, exitBulkMode, t.promptDeleted, t.saveFail]);
+
+  const handleBulkCategoryChange = useCallback(async (newCategory: string) => {
+    if (!newCategory) return;
+    try {
+      await Promise.all(selectedBulkIds.map(id => updateDoc(doc(db, 'prompts', id), { category: newCategory })));
+      toast.success(t.promptUpdated);
+      exitBulkMode();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'prompts');
+      toast.error(t.saveFail);
+    }
+  }, [selectedBulkIds, exitBulkMode, t.promptUpdated, t.saveFail]);
+
+  const handleExport = useCallback(() => {
+    const exportData = prompts.map(({ id, ...rest }) => rest);
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `creo-prompts-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(t.exportSuccess);
+  }, [prompts, t.exportSuccess]);
+
+  const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !user) return;
+
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!Array.isArray(parsed)) throw new Error('Invalid import format: expected an array');
+
+      let importedCount = 0;
+      for (const item of parsed) {
+        if (!item || typeof item.title !== 'string' || typeof item.content !== 'string') continue;
+        await addDoc(collection(db, 'prompts'), {
+          title: item.title,
+          content: item.content,
+          category: typeof item.category === 'string' ? item.category : '',
+          type: item.type === 'video' ? 'video' : 'image',
+          tags: Array.isArray(item.tags) ? item.tags.filter((tag: unknown) => typeof tag === 'string') : [],
+          exampleUrl: typeof item.exampleUrl === 'string' ? item.exampleUrl : '',
+          linkedPromptIds: [],
+          copyCount: 0,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+          authorUid: user.uid,
+          authorName: userProfile?.displayName || user.displayName || user.email?.split('@')[0] || 'Unknown'
+        });
+        importedCount++;
+      }
+      toast.success(`${t.importSuccess}: ${importedCount}`);
+    } catch (error) {
+      console.error("Import error:", error);
+      toast.error(t.importFail);
+    } finally {
+      setIsImporting(false);
+    }
+  }, [user, userProfile, t.importSuccess, t.importFail]);
 
 
   if (loading) {
@@ -980,14 +1243,69 @@ export default function App() {
               )}
             </div>
 
+            <div className="relative shrink-0">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                className="appearance-none bg-white/5 border border-white/10 rounded-full pl-8 pr-4 py-2 text-xs font-medium text-white/70 focus:outline-none focus:border-emerald-400/50 hover:bg-white/10 transition-all cursor-pointer"
+              >
+                <option value="newest" className="bg-[#0a0a0a]">{t.sortNewest}</option>
+                <option value="oldest" className="bg-[#0a0a0a]">{t.sortOldest}</option>
+                <option value="alphabetical" className="bg-[#0a0a0a]">{t.sortAlphabetical}</option>
+                <option value="mostCopied" className="bg-[#0a0a0a]">{t.sortMostCopied}</option>
+              </select>
+              <ArrowUpDown size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+            </div>
+
+            <button
+              onClick={handleExport}
+              title={t.exportPrompts}
+              className="p-2.5 bg-white/5 border border-white/10 rounded-full text-white/40 hover:text-emerald-400 hover:bg-white/10 transition-all shrink-0"
+            >
+              <Download size={18} />
+            </button>
+
+            {user && (
+              <>
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept="application/json"
+                  className="hidden"
+                  onChange={handleImportFile}
+                />
+                <button
+                  onClick={() => importInputRef.current?.click()}
+                  disabled={isImporting}
+                  title={t.importPrompts}
+                  className="p-2.5 bg-white/5 border border-white/10 rounded-full text-white/40 hover:text-emerald-400 hover:bg-white/10 transition-all shrink-0 disabled:opacity-50"
+                >
+                  {isImporting ? <Loader2 size={18} className="animate-spin" /> : <FileUp size={18} />}
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (isBulkMode) exitBulkMode(); else setIsBulkMode(true);
+                  }}
+                  title={t.selectMode}
+                  className={cn(
+                    "p-2.5 rounded-full border transition-all shrink-0",
+                    isBulkMode ? "bg-emerald-400 border-emerald-400 text-black" : "bg-white/5 border-white/10 text-white/40 hover:text-emerald-400 hover:bg-white/10"
+                  )}
+                >
+                  <CheckSquare size={18} />
+                </button>
+              </>
+            )}
+
             <div className="flex items-center gap-2 border-l border-white/10 pl-2">
-              <button 
+              <button
                 onClick={() => setViewMode('grid')}
                 className={cn("p-2 rounded-lg", viewMode === 'grid' ? "bg-white/10 text-white" : "text-white/40")}
               >
                 <LayoutGrid size={20} />
               </button>
-              <button 
+              <button
                 onClick={() => setViewMode('list')}
                 className={cn("p-2 rounded-lg", viewMode === 'list' ? "bg-white/10 text-white" : "text-white/40")}
               >
@@ -996,7 +1314,7 @@ export default function App() {
             </div>
 
             {user && (
-              <button 
+              <button
                 onClick={() => {
                   setEditingPrompt(null);
                   setIsModalOpen(true);
@@ -1013,8 +1331,8 @@ export default function App() {
         {/* Grid */}
         <div className="max-w-full px-[10%]">
           <AnimatePresence mode="wait">
-            <motion.div 
-              key={selectedCategory + showFavoritesOnly + searchQuery + selectedTypeFilter}
+            <motion.div
+              key={selectedCategory + showFavoritesOnly + searchQuery + selectedTypeFilter + sortBy}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, transition: { duration: 0.08 } }}
@@ -1025,7 +1343,7 @@ export default function App() {
               )}
             >
               {filteredPrompts.map((prompt) => (
-                <PromptCard 
+                <PromptCard
                   key={prompt.id}
                   prompt={prompt}
                   viewMode={viewMode}
@@ -1034,6 +1352,10 @@ export default function App() {
                   toggleFavorite={toggleFavorite}
                   setViewingPromptId={setViewingPromptId}
                   copyToClipboard={copyToClipboard}
+                  onDuplicate={handleDuplicatePrompt}
+                  isBulkMode={isBulkMode}
+                  isSelected={selectedBulkIds.includes(prompt.id!)}
+                  onToggleSelect={toggleBulkSelect}
                   t={t}
                 />
               ))}
@@ -1051,6 +1373,85 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Bulk Action Bar */}
+      <AnimatePresence>
+        {isBulkMode && selectedBulkIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-[#141414] border border-white/10 rounded-2xl px-5 py-3 shadow-2xl"
+          >
+            <span className="text-sm font-bold text-white/80 whitespace-nowrap">
+              {selectedBulkIds.length} {t.selectedCount}
+            </span>
+            <div className="w-[1px] h-5 bg-white/10" />
+            <select
+              value=""
+              onChange={(e) => handleBulkCategoryChange(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-400/50"
+            >
+              <option value="" className="bg-[#0a0a0a]">{t.changeCategory}</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat} className="bg-[#0a0a0a]">{cat}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => setShowBulkDeleteConfirm(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-bold transition-all"
+            >
+              <Trash2 size={14} />
+              {t.deleteSelected}
+            </button>
+            <button
+              onClick={exitBulkMode}
+              className="p-1.5 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-all"
+            >
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bulk Delete Confirmation */}
+      <AnimatePresence>
+        {showBulkDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#141414] border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
+            >
+              <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold mb-2">{t.bulkDeleteConfirm}</h3>
+              <p className="text-white/40 text-sm mb-8">{selectedBulkIds.length} {t.selectedCount}</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowBulkDeleteConfirm(false)}
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition-all"
+                >
+                  {t.cancel}
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
+                >
+                  {t.deleteSelected}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Unified Modal (Add/Edit/View) */}
       <AnimatePresence>
@@ -1413,6 +1814,12 @@ export default function App() {
                                 <Loader2 size={12} className="text-violet-400/50" />
                                 <span>{t.lastUpdate}: {formatDate(viewingPrompt?.updatedAt)}</span>
                               </div>
+                              {typeof viewingPrompt?.copyCount === 'number' && viewingPrompt.copyCount > 0 && (
+                                <div className="flex items-center gap-1.5">
+                                  <Copy size={12} className="text-emerald-400/50" />
+                                  <span>{t.copiedLabel}: {viewingPrompt.copyCount}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
@@ -1435,12 +1842,12 @@ export default function App() {
                               className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-sm text-white/80 whitespace-pre-wrap font-mono leading-relaxed focus:outline-none focus:border-emerald-400 transition-colors resize-none"
                             />
                           ) : (
-                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-sm text-white/80 whitespace-pre-wrap font-mono leading-relaxed selection:bg-emerald-400/30 relative group">
-                              <HighlightedPrompt content={viewingPrompt?.content || ''} values={placeholderValues} />
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-sm text-white/80 leading-relaxed selection:bg-emerald-400/30 relative group">
+                              <MarkdownPrompt content={viewingPrompt?.content || ''} values={placeholderValues} />
                               
                               <button 
                                 type="button"
-                                onClick={() => viewingPrompt && copyToClipboard(viewingPrompt.content)}
+                                onClick={() => viewingPrompt && copyToClipboard(viewingPrompt.content, viewingPrompt.id)}
                                 className="absolute top-4 right-4 p-2.5 bg-white/10 hover:bg-emerald-400 hover:text-black rounded-xl transition-all opacity-0 group-hover:opacity-100 shadow-lg"
                               >
                                 <Copy size={18} />
@@ -1638,7 +2045,7 @@ export default function App() {
                         <>
                           <button 
                             type="button"
-                            onClick={() => viewingPrompt && copyToClipboard(viewingPrompt.content)}
+                            onClick={() => viewingPrompt && copyToClipboard(viewingPrompt.content, viewingPrompt.id)}
                             className="flex-1 flex items-center justify-center gap-3 py-4 bg-emerald-400 text-black rounded-2xl font-bold hover:bg-emerald-300 transition-all active:scale-95 shadow-xl shadow-emerald-400/20"
                           >
                             <Copy size={20} />
@@ -1646,7 +2053,7 @@ export default function App() {
                           </button>
                           
                           {user && (
-                            <button 
+                            <button
                               type="button"
                               onClick={(e) => {
                                 e.preventDefault();
@@ -1656,6 +2063,21 @@ export default function App() {
                               className="w-14 h-14 shrink-0 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-2xl text-white/60 hover:text-white transition-all active:scale-95"
                             >
                               <Edit2 size={20} />
+                            </button>
+                          )}
+
+                          {user && viewingPrompt && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDuplicatePrompt(viewingPrompt);
+                              }}
+                              title={t.duplicate}
+                              className="w-14 h-14 shrink-0 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-2xl text-white/60 hover:text-white transition-all active:scale-95"
+                            >
+                              <CopyPlus size={20} />
                             </button>
                           )}
                         </>
