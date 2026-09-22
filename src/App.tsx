@@ -16,10 +16,10 @@ import {
   getDocs,
   increment
 } from 'firebase/firestore';
-import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  onAuthStateChanged, 
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
   signOut,
   User
 } from 'firebase/auth';
@@ -109,6 +109,14 @@ const TRANSLATIONS = {
     loginSuccess: "Successfully logged in!",
     loginFail: "Failed to login",
     logoutSuccess: "Logged out",
+    password: "Password",
+    createAccount: "Create account",
+    alreadyHaveAccount: "Already have an account? Log in",
+    noAccount: "No account? Create one",
+    authEmailInUse: "This email is already registered",
+    authWeakPassword: "Password must be at least 6 characters",
+    authInvalidEmail: "Invalid email address",
+    authInvalidCredentials: "Wrong email or password",
     promptUpdated: "Prompt updated",
     promptAdded: "Prompt added",
     promptDeleted: "Prompt deleted",
@@ -189,6 +197,14 @@ const TRANSLATIONS = {
     loginSuccess: "Успешный вход!",
     loginFail: "Ошибка входа",
     logoutSuccess: "Выход выполнен",
+    password: "Пароль",
+    createAccount: "Создать аккаунт",
+    alreadyHaveAccount: "Уже есть аккаунт? Войти",
+    noAccount: "Нет аккаунта? Создать",
+    authEmailInUse: "Этот email уже зарегистрирован",
+    authWeakPassword: "Пароль должен быть не короче 6 символов",
+    authInvalidEmail: "Некорректный email",
+    authInvalidCredentials: "Неверный email или пароль",
     promptUpdated: "Промпт обновлен",
     promptAdded: "Промпт добавлен",
     promptDeleted: "Промпт удален",
@@ -534,6 +550,11 @@ export default function App() {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
 
   const checkScroll = useCallback(() => {
     if (scrollContainerRef.current) {
@@ -758,16 +779,36 @@ export default function App() {
     return () => unsubscribe();
   }, [isAuthReady]);
 
-  const handleLogin = async () => {
-    const provider = new GoogleAuthProvider();
+  const closeLoginModal = useCallback(() => {
+    setIsLoginModalOpen(false);
+    setAuthMode('login');
+    setAuthEmail('');
+    setAuthPassword('');
+  }, []);
+
+  const handleAuthSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsAuthSubmitting(true);
     try {
-      await signInWithPopup(auth, provider);
+      if (authMode === 'signup') {
+        await createUserWithEmailAndPassword(auth, authEmail, authPassword);
+      } else {
+        await signInWithEmailAndPassword(auth, authEmail, authPassword);
+      }
       toast.success(t.loginSuccess);
+      closeLoginModal();
     } catch (error) {
-      console.error("Login error:", error);
-      toast.error(t.loginFail);
+      console.error("Auth error:", error);
+      const code = (error as { code?: string })?.code;
+      if (code === 'auth/email-already-in-use') toast.error(t.authEmailInUse);
+      else if (code === 'auth/weak-password') toast.error(t.authWeakPassword);
+      else if (code === 'auth/invalid-email') toast.error(t.authInvalidEmail);
+      else if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') toast.error(t.authInvalidCredentials);
+      else toast.error(t.loginFail);
+    } finally {
+      setIsAuthSubmitting(false);
     }
-  };
+  }, [authMode, authEmail, authPassword, closeLoginModal, t]);
 
   const handleLogout = async () => {
     try {
@@ -1145,7 +1186,7 @@ export default function App() {
               </div>
             ) : (
               <button 
-                onClick={handleLogin}
+                onClick={() => setIsLoginModalOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-accent text-accent-ink rounded-full font-bold hover:bg-accent-hover transition-all active:scale-95"
               >
                 <LogIn size={18} />
@@ -2145,6 +2186,83 @@ export default function App() {
               </motion.p>
             </div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Login / Sign Up Modal */}
+      <AnimatePresence>
+        {isLoginModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6"
+            onClick={closeLoginModal}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-surface border border-ink/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
+            >
+              <div className="px-6 py-5 border-b border-ink/10 flex items-center justify-between">
+                <h3 className="text-lg font-display font-bold">
+                  {authMode === 'signup' ? t.createAccount : t.login}
+                </h3>
+                <button
+                  onClick={closeLoginModal}
+                  className="p-2 hover:bg-ink/10 rounded-full text-ink/40 hover:text-ink transition-all"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleAuthSubmit} className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-ink/40 ml-1">Email</label>
+                  <input
+                    type="email"
+                    required
+                    autoFocus
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full bg-ink/5 border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accent transition-colors"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-ink/40 ml-1">{t.password}</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-ink/5 border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accent transition-colors"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isAuthSubmitting}
+                  className="w-full py-3 bg-accent text-accent-ink rounded-xl font-bold hover:bg-accent-hover transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isAuthSubmitting && <Loader2 className="animate-spin" size={16} />}
+                  {authMode === 'signup' ? t.createAccount : t.login}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')}
+                  className="w-full text-center text-xs text-ink/40 hover:text-ink transition-colors"
+                >
+                  {authMode === 'signup' ? t.alreadyHaveAccount : t.noAccount}
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
