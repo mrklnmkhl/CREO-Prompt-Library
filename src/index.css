@@ -5,25 +5,62 @@
   --font-sans: "Golos Text", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Unbounded", ui-sans-serif, system-ui, sans-serif;
 
-  --color-bg: #0b0b0a;
-  --color-surface: #151512;
-  --color-surface-2: #1c1c18;
-  --color-ink: #f5f3ee;
-  --color-accent: #d6ff3f;
-  --color-accent-hover: #e4ff6b;
-  --color-accent-ink: #14150b;
-  --color-chip-image: #2e2416;
-  --color-chip-image-text: #ffc793;
-  --color-chip-video: #211c33;
-  --color-chip-video-text: #cbbfff;
-  --color-ph: #ff6e85;
-  --color-danger: #ff6b57;
-  --color-danger-hover: #e85340;
+  /* Default (Midnight / dark) values — overridden per theme below */
+  --color-bg: hsl(258 22% 7%);
+  --color-surface: hsl(258 18% 11%);
+  --color-surface-2: hsl(258 16% 15%);
+  --color-ink: hsl(260 25% 96%);
+  --color-accent: hsl(252 90% 68%);
+  --color-accent-hover: hsl(252 95% 76%);
+  --color-accent-ink: hsl(252 40% 10%);
+  --color-chip-image: hsl(174 45% 16%);
+  --color-chip-image-text: hsl(174 60% 55%);
+  --color-chip-video: hsl(252 45% 18%);
+  --color-chip-video-text: hsl(252 90% 78%);
+  --color-ph: hsl(350 90% 70%);
+  --color-danger: hsl(350 85% 62%);
+  --color-danger-hover: hsl(350 85% 52%);
+}
+
+html[data-theme="sunset"] {
+  --color-bg: hsl(20 22% 8%);
+  --color-surface: hsl(20 20% 12%);
+  --color-surface-2: hsl(20 18% 16%);
+  --color-ink: hsl(24 30% 96%);
+  --color-accent: hsl(14 90% 62%);
+  --color-accent-hover: hsl(14 95% 70%);
+  --color-accent-ink: hsl(14 40% 10%);
+  --color-chip-image: hsl(48 45% 16%);
+  --color-chip-image-text: hsl(48 75% 60%);
+  --color-chip-video: hsl(336 45% 18%);
+  --color-chip-video-text: hsl(336 82% 70%);
+  --color-ph: hsl(350 90% 70%);
+  --color-danger: hsl(0 85% 62%);
+  --color-danger-hover: hsl(0 85% 52%);
+}
+
+html[data-theme="light"] {
+  --color-bg: hsl(258 40% 98%);
+  --color-surface: #ffffff;
+  --color-surface-2: hsl(258 35% 95%);
+  --color-ink: hsl(260 30% 12%);
+  --color-accent: hsl(252 85% 58%);
+  --color-accent-hover: hsl(252 85% 50%);
+  --color-accent-ink: #ffffff;
+  --color-chip-image: hsl(174 55% 92%);
+  --color-chip-image-text: hsl(174 65% 30%);
+  --color-chip-video: hsl(252 55% 94%);
+  --color-chip-video-text: hsl(252 70% 42%);
+  --color-ph: hsl(350 80% 45%);
+  --color-danger: hsl(350 75% 48%);
+  --color-danger-hover: hsl(350 75% 40%);
 }
 
 @layer base {
   html {
     scrollbar-gutter: stable;
+    background: var(--color-bg);
+    transition: background-color 0.2s ease;
   }
 
   * {
@@ -55,5 +92,36 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+}
+
+@layer components {
+  /* Prompt card hover: proximity-brightened contour + cursor-tracked ring */
+  .prompt-card {
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .prompt-card:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 0 0 1.5px var(--cat-dim),
+      0 0 26px 3px var(--cat-glow),
+      0 22px 44px -18px rgba(0, 0, 0, 0.45);
+  }
+  .prompt-card-ring {
+    position: absolute;
+    inset: -1.5px;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), var(--cat-solid), transparent 68%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  .prompt-card:hover .prompt-card-ring {
+    opacity: 1;
   }
 }

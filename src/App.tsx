@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   collection, 
   onSnapshot, 
@@ -23,26 +23,17 @@ import {
   signOut,
   User
 } from 'firebase/auth';
-import { 
-  ref, 
-  uploadBytes, 
-  getDownloadURL 
-} from 'firebase/storage';
-import { db, auth, storage } from './firebase';
+import { db, auth } from './firebase';
 import { Prompt, UserProfile, OperationType } from './types';
 import { handleFirestoreError } from './utils/error-handler';
-import { 
-  Plus, 
-  Search, 
-  Copy, 
-  Edit2, 
-  Trash2, 
-  LogOut, 
-  LogIn, 
-  X, 
+import {
+  Plus,
+  Search,
+  Copy,
+  Edit2,
+  Trash2,
+  X,
   Image as ImageIcon,
-  Video,
-  ExternalLink,
   Check,
   Filter,
   ChevronRight,
@@ -51,29 +42,23 @@ import {
   List as ListIcon,
   Upload,
   Loader2,
-  Heart,
-  Tag,
   Calendar,
-  Pencil,
   User as UserIcon,
   Download,
   FileUp,
+  CheckSquare,
   CopyPlus,
-  ArrowUpDown,
-  CheckSquare
+  ArrowUpDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster, toast } from 'sonner';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-import ReactMarkdown from 'react-markdown';
-import remarkHighlightPlaceholders from './utils/highlightPlaceholders';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-const CATEGORIES = ['All', 'Outdoor', 'Studio', 'Interiors', 'People (GEO)', 'Verticals', 'Hands'];
+import { cn } from './lib/cn';
+import { useTheme } from './hooks/useTheme';
+import { Sidebar } from './components/Sidebar';
+import { SettingsModal } from './components/SettingsModal';
+import { AuthModal } from './components/AuthModal';
+import { PromptCard } from './components/PromptCard';
+import { MarkdownPrompt } from './components/MarkdownPrompt';
 
 const TRANSLATIONS = {
   en: {
@@ -162,7 +147,14 @@ const TRANSLATIONS = {
     deleteSelected: "Delete",
     changeCategory: "Change category",
     bulkDeleteConfirm: "Delete the selected prompts?",
-    copiedLabel: "Copied"
+    copiedLabel: "Copied",
+    brandName: "Prompt Library",
+    toggleSidebar: "Collapse/expand menu",
+    categoriesLabel: "Categories",
+    settings: "Settings",
+    theme: "Theme",
+    language: "Language",
+    logout: "Log out"
   },
   ru: {
     search: "Поиск",
@@ -250,7 +242,14 @@ const TRANSLATIONS = {
     deleteSelected: "Удалить",
     changeCategory: "Изменить категорию",
     bulkDeleteConfirm: "Удалить выбранные промпты?",
-    copiedLabel: "Скопировано"
+    copiedLabel: "Скопировано",
+    brandName: "Prompt Library",
+    toggleSidebar: "Свернуть/развернуть меню",
+    categoriesLabel: "Категории",
+    settings: "Настройки",
+    theme: "Тема",
+    language: "Язык",
+    logout: "Выйти"
   }
 };
 
@@ -271,242 +270,6 @@ const formatDate = (timestamp: any) => {
   const year = date.getFullYear();
   return `${day}.${month}.${year}`;
 };
-
-const HighlightedPrompt = memo(({ content, values = {} }: { content: string; values?: Record<string, string> }) => {
-  const parts = content.split(/(\[[^\]]+\])/g);
-  return (
-    <>
-      {parts.map((part, i) => {
-        if (part.startsWith('[') && part.endsWith(']')) {
-          const key = part.slice(1, -1);
-          return (
-            <span key={i} className="text-ph font-bold bg-ph/10 px-0.5 rounded">
-              {values[key] || part}
-            </span>
-          );
-        }
-        return part;
-      })}
-    </>
-  );
-});
-
-const MarkdownPrompt = memo(({ content, values = {} }: { content: string; values?: Record<string, string> }) => {
-  return (
-    <div className="prose-sm max-w-none">
-      <ReactMarkdown
-        remarkPlugins={[remarkHighlightPlaceholders]}
-        components={{
-          p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
-          strong: ({ children }) => <strong className="font-bold text-ink">{children}</strong>,
-          em: ({ children }) => <em className="italic text-ink/70">{children}</em>,
-          ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,
-          ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1">{children}</ol>,
-          li: ({ children }) => <li className="text-ink/80">{children}</li>,
-          code: ({ children }) => <code className="bg-ink/10 px-1.5 py-0.5 rounded text-accent-hover text-xs">{children}</code>,
-          h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-ink">{children}</h1>,
-          h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-ink">{children}</h2>,
-          h3: ({ children }) => <h3 className="text-sm font-bold mb-2 text-ink">{children}</h3>,
-          a: ({ children, href }) => (
-            <a href={href} target="_blank" rel="noreferrer" className="text-accent underline">
-              {children}
-            </a>
-          ),
-          blockquote: ({ children }) => (
-            <blockquote className="border-l-2 border-accent/40 pl-4 italic text-ink/60 mb-3">{children}</blockquote>
-          ),
-          mark: (props: any) => {
-            const key = props['data-placeholder'];
-            return (
-              <span className="text-ph font-bold bg-ph/10 px-0.5 rounded">
-                {values[key] || props.children}
-              </span>
-            );
-          },
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
-  );
-});
-
-const PromptCard = memo(({
-  prompt,
-  viewMode,
-  user,
-  userProfile,
-  toggleFavorite,
-  setViewingPromptId,
-  copyToClipboard,
-  onDuplicate,
-  isBulkMode,
-  isSelected,
-  onToggleSelect,
-  t
-}: {
-  prompt: Prompt;
-  viewMode: 'grid' | 'list';
-  user: any;
-  userProfile: UserProfile | null;
-  toggleFavorite: (id: string) => void;
-  setViewingPromptId: (id: string) => void;
-  copyToClipboard: (text: string, promptId?: string) => void;
-  onDuplicate: (prompt: Prompt) => void;
-  isBulkMode: boolean;
-  isSelected: boolean;
-  onToggleSelect: (id: string) => void;
-  t: any;
-}) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0, transition: { duration: 0.08 } }}
-      transition={{ duration: 0.18, ease: "easeInOut" }}
-      onClick={isBulkMode ? () => onToggleSelect(prompt.id!) : undefined}
-      className={cn(
-        "group relative bg-ink/5 border rounded-xl overflow-hidden transition-colors duration-200 flex flex-col shadow-lg",
-        isBulkMode ? "cursor-pointer" : "hover:border-accent/30 hover:shadow-accent/5",
-        isSelected ? "border-accent/60 ring-2 ring-accent/30" : "border-ink/10",
-        viewMode === 'list' && "flex flex-row h-48"
-      )}
-    >
-      {isBulkMode && (
-        <div className={cn(
-          "absolute top-3 left-3 z-30 w-6 h-6 rounded-md flex items-center justify-center border-2 transition-all",
-          isSelected ? "bg-accent border-accent text-accent-ink" : "bg-black/40 border-ink/30 text-transparent"
-        )}>
-          <Check size={14} strokeWidth={3} />
-        </div>
-      )}
-
-      {/* Preview Image */}
-      <div
-        className={cn(
-          "relative bg-surface-2 overflow-hidden shrink-0",
-          isBulkMode ? "" : "cursor-pointer",
-          viewMode === 'grid' ? "aspect-square" : "w-64 h-full"
-        )}
-        onClick={isBulkMode ? undefined : () => setViewingPromptId(prompt.id!)}
-      >
-        {prompt.exampleUrl ? (
-          <img
-            src={prompt.exampleUrl}
-            alt={prompt.title}
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-ink/10">
-            <ImageIcon size={32} />
-            <span className="text-[8px] uppercase tracking-widest mt-2">{t.noPreview}</span>
-          </div>
-        )}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <div className="bg-ink/10 backdrop-blur-md p-2 rounded-full border border-ink/20">
-            <ExternalLink size={16} className="text-ink" />
-          </div>
-        </div>
-
-        {/* Favorite Button */}
-        {user && !isBulkMode && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleFavorite(prompt.id!);
-            }}
-            className={cn(
-              "absolute top-3 right-3 z-20 p-2 rounded-full backdrop-blur-md border transition-all",
-              userProfile?.favoritePromptIds?.includes(prompt.id!)
-                ? "bg-danger/20 border-danger/30 text-danger"
-                : "bg-black/20 border-ink/10 text-ink/40 hover:text-ink hover:bg-black/40"
-            )}
-          >
-            <Heart size={14} fill={userProfile?.favoritePromptIds?.includes(prompt.id!) ? "currentColor" : "none"} />
-          </button>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="p-4 flex flex-col flex-1">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-accent/80">
-            {prompt.category || 'General'}
-          </span>
-          <div className="w-[1px] h-3 bg-ink/10" />
-          <span className={cn(
-            "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm",
-            prompt.type === 'video'
-              ? "bg-chip-video/20 text-chip-video-text border border-chip-video/30 shadow-[0_0_10px_rgba(203,191,255,0.25)]"
-              : "bg-chip-image/10 text-chip-image-text"
-          )}>
-            {prompt.type === 'video' ? 'Video' : 'Image'}
-          </span>
-          {typeof prompt.copyCount === 'number' && prompt.copyCount > 0 && (
-            <>
-              <div className="w-[1px] h-3 bg-ink/10 ml-auto" />
-              <span className="flex items-center gap-1 text-[9px] font-bold text-ink/20">
-                <Copy size={9} />
-                {prompt.copyCount}
-              </span>
-            </>
-          )}
-        </div>
-
-        <h3 className="text-base font-display font-bold mb-1 line-clamp-1 group-hover:text-accent transition-colors">
-          {prompt.title}
-        </h3>
-
-        {prompt.tags && prompt.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            {prompt.tags.slice(0, 3).map((tag, idx) => (
-              <span key={idx} className="text-[8px] px-1.5 py-0.5 bg-ink/5 text-ink/40 rounded-full border border-ink/5">
-                #{tag}
-              </span>
-            ))}
-            {prompt.tags.length > 3 && (
-              <span className="text-[8px] px-1.5 py-0.5 text-ink/20">
-                +{prompt.tags.length - 3}
-              </span>
-            )}
-          </div>
-        )}
-
-        <p className="text-xs text-ink/40 line-clamp-2 mb-4 flex-1 leading-relaxed">
-          <HighlightedPrompt content={prompt.content} />
-        </p>
-
-        {!isBulkMode && (
-          <div className="flex items-center gap-2 mt-auto">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                copyToClipboard(prompt.content, prompt.id);
-              }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-ink/5 hover:bg-ink/10 border border-ink/10 rounded-lg text-xs font-medium transition-all active:scale-95"
-            >
-              <Copy size={14} />
-              <span>{t.copyPrompt}</span>
-            </button>
-            {user && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDuplicate(prompt);
-                }}
-                title={t.duplicate}
-                className="p-2 bg-ink/5 hover:bg-ink/10 border border-ink/10 rounded-lg text-ink/40 hover:text-accent transition-all active:scale-95"
-              >
-                <CopyPlus size={14} />
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
-});
 
 export default function App() {
   const [lang, setLang] = useState<'en' | 'ru'>('ru');
@@ -541,9 +304,6 @@ export default function App() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [renamingCategory, setRenamingCategory] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'alphabetical' | 'mostCopied'>('newest');
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
@@ -555,39 +315,16 @@ export default function App() {
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
-
-  const checkScroll = useCallback(() => {
-    if (scrollContainerRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-      // Use a small threshold for better reliability
-      setCanScrollLeft(scrollLeft > 2);
-      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
-    }
-  }, []);
+  const { theme, setTheme, isLight } = useTheme();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    const stored = localStorage.getItem('creo-sidebar-open');
+    return stored === null ? true : stored === 'true';
+  });
 
   useEffect(() => {
-    // Check multiple times to ensure layout has settled
-    checkScroll();
-    const timer = setTimeout(checkScroll, 100);
-    const timer2 = setTimeout(checkScroll, 500);
-    
-    window.addEventListener('resize', checkScroll);
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(timer2);
-      window.removeEventListener('resize', checkScroll);
-    };
-  }, [categories, checkScroll, prompts]);
-
-  const scroll = useCallback((direction: 'left' | 'right') => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = 200;
-      scrollContainerRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      });
-    }
-  }, []);
+    localStorage.setItem('creo-sidebar-open', String(sidebarOpen));
+  }, [sidebarOpen]);
 
   const closeModal = useCallback(() => {
     setViewingPromptId(null);
@@ -1105,113 +842,40 @@ export default function App() {
         <div className="absolute bottom-[-20%] left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-accent/5 blur-[120px] rounded-full" />
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-bg/80 backdrop-blur-md border-b border-ink/10">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center font-display font-bold text-accent-ink rotate-3">
-              C
-            </div>
-            <h1 className="text-xl font-display font-bold tracking-tight bg-gradient-to-r from-ink to-ink/60 bg-clip-text text-transparent">
-              CREO <span className="text-accent">Prompt</span> Library
-            </h1>
-          </div>
+      <div className="flex relative z-10">
+        <Sidebar
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          selectedTypeFilter={selectedTypeFilter}
+          onSelectType={setSelectedTypeFilter}
+          showFavoritesOnly={showFavoritesOnly}
+          onToggleFavoritesOnly={() => setShowFavoritesOnly(!showFavoritesOnly)}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onManageCategories={() => setIsCategoryModalOpen(true)}
+          user={user}
+          onOpenLogin={() => setIsLoginModalOpen(true)}
+          onLogout={handleLogout}
+          isLight={isLight}
+          t={t}
+        />
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center bg-ink/5 rounded-full p-1 border border-ink/10">
-              <button 
-                onClick={() => setSelectedTypeFilter(selectedTypeFilter === 'image' ? 'all' : 'image')}
-                className={cn(
-                  "px-3 py-1 rounded-full text-[10px] font-bold transition-all flex items-center gap-1.5",
-                  selectedTypeFilter === 'image' ? "bg-chip-image text-chip-image-text shadow-lg shadow-chip-image-text/20" : "text-ink/40 hover:text-ink"
-                )}
-              >
-                <ImageIcon size={12} />
-                IMAGE
-              </button>
-              <button 
-                onClick={() => setSelectedTypeFilter(selectedTypeFilter === 'video' ? 'all' : 'video')}
-                className={cn(
-                  "px-3 py-1 rounded-full text-[10px] font-bold transition-all flex items-center gap-1.5",
-                  selectedTypeFilter === 'video' ? "bg-chip-video text-chip-video-text shadow-lg shadow-chip-video-text/20" : "text-ink/40 hover:text-ink"
-                )}
-              >
-                <Video size={12} />
-                VIDEO
-              </button>
-            </div>
-
-            <div className="flex items-center bg-ink/5 rounded-full p-1 border border-ink/10">
-              <button 
-                onClick={() => setLang('en')}
-                className={cn(
-                  "px-2 py-1 rounded-full text-[10px] font-bold transition-all",
-                  lang === 'en' ? "bg-ink text-bg" : "text-ink/40 hover:text-ink"
-                )}
-              >
-                EN
-              </button>
-              <button 
-                onClick={() => setLang('ru')}
-                className={cn(
-                  "px-2 py-1 rounded-full text-[10px] font-bold transition-all",
-                  lang === 'ru' ? "bg-ink text-bg" : "text-ink/40 hover:text-ink"
-                )}
-              >
-                RU
-              </button>
-            </div>
-
-            {user ? (
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                  className={cn(
-                    "p-2 rounded-full transition-all",
-                    showFavoritesOnly ? "bg-danger/20 text-danger" : "hover:bg-ink/5 text-ink/60 hover:text-ink"
-                  )}
-                  title={t.favorites}
-                >
-                  <Heart size={20} fill={showFavoritesOnly ? "currentColor" : "none"} />
-                </button>
-                <div className="hidden sm:block text-right">
-                  <p className="text-sm font-medium">{user.displayName}</p>
-                </div>
-                <button 
-                  onClick={handleLogout}
-                  className="p-2 hover:bg-ink/5 rounded-full transition-colors text-ink/60 hover:text-ink"
-                >
-                  <LogOut size={20} />
-                </button>
-              </div>
-            ) : (
-              <button 
-                onClick={() => setIsLoginModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-accent text-accent-ink rounded-full font-bold hover:bg-accent-hover transition-all active:scale-95"
-              >
-                <LogIn size={18} />
-                <span>{t.login}</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main className="w-full py-8 relative z-10">
-        {/* Controls */}
-        <div className="max-w-7xl mx-auto px-6 mb-8">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <main className="flex-1 min-w-0 py-8 px-6 md:px-10">
+          {/* Controls */}
+          <div className="flex flex-wrap items-center gap-3 mb-8">
             <div className="relative w-full max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" size={18} />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder={t.search}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-ink/5 border border-ink/10 rounded-xl py-2.5 pl-10 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
               />
               {searchQuery && (
-                <button 
+                <button
                   onClick={() => setSearchQuery('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/30 hover:text-ink transition-colors"
                 >
@@ -1219,70 +883,8 @@ export default function App() {
                 </button>
               )}
             </div>
-            
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="relative flex-1 flex items-center group/categories overflow-hidden">
-                {canScrollLeft && (
-                  <button 
-                    onClick={() => scroll('left')}
-                    className="absolute left-0 top-0 bottom-0 z-20 px-3 text-ink/40 hover:text-ink transition-colors bg-gradient-to-r from-bg via-bg/95 to-transparent flex items-center"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-                )}
-                
-                <div 
-                  ref={scrollContainerRef}
-                  onScroll={checkScroll}
-                  className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar py-2 px-10"
-                >
-                  <button
-                    onClick={() => setSelectedCategory('All')}
-                    className={cn(
-                      "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all shrink-0",
-                      selectedCategory === 'All' 
-                        ? "bg-accent text-accent-ink shadow-lg shadow-accent/20" 
-                        : "bg-ink/5 text-ink/60 hover:bg-ink/10"
-                    )}
-                  >
-                    {t.all}
-                  </button>
-                  {categories.map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={cn(
-                        "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all shrink-0",
-                        selectedCategory === cat 
-                          ? "bg-accent text-accent-ink shadow-lg shadow-accent/20" 
-                          : "bg-ink/5 text-ink/60 hover:bg-ink/10"
-                      )}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
 
-                {canScrollRight && (
-                  <button 
-                    onClick={() => scroll('right')}
-                    className="absolute right-0 top-0 bottom-0 z-20 px-3 text-ink/40 hover:text-ink transition-colors bg-gradient-to-l from-bg via-bg/95 to-transparent flex items-center"
-                  >
-                    <ChevronRight size={20} />
-                  </button>
-                )}
-              </div>
-
-              {user && (
-                <button 
-                  onClick={() => setIsCategoryModalOpen(true)}
-                  className="p-2 bg-ink/5 border border-ink/10 rounded-full text-ink/40 hover:text-accent hover:bg-ink/10 transition-all shrink-0"
-                  title={t.manageCategories}
-                >
-                  <Pencil size={16} />
-                </button>
-              )}
-            </div>
+            <div className="flex-1" />
 
             <div className="relative shrink-0">
               <select
@@ -1367,10 +969,8 @@ export default function App() {
               </button>
             )}
           </div>
-        </div>
 
-        {/* Grid */}
-        <div className="max-w-full px-[10%]">
+          {/* Grid */}
           <AnimatePresence mode="wait">
             <motion.div
               key={selectedCategory + showFavoritesOnly + searchQuery + selectedTypeFilter + sortBy}
@@ -1380,7 +980,7 @@ export default function App() {
               transition={{ duration: 0.18, ease: "easeInOut" }}
               className={cn(
                 "grid gap-6 relative",
-                viewMode === 'grid' ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" : "grid-cols-1"
+                viewMode === 'grid' ? "grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1"
               )}
             >
               {filteredPrompts.map((prompt) => (
@@ -1390,6 +990,7 @@ export default function App() {
                   viewMode={viewMode}
                   user={user}
                   userProfile={userProfile}
+                  isLight={isLight}
                   toggleFavorite={toggleFavorite}
                   setViewingPromptId={setViewingPromptId}
                   copyToClipboard={copyToClipboard}
@@ -1402,18 +1003,28 @@ export default function App() {
               ))}
             </motion.div>
           </AnimatePresence>
-        </div>
 
-        {filteredPrompts.length === 0 && (
-          <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-ink/5 rounded-full mb-4 text-ink/20">
-              <Search size={32} />
+          {filteredPrompts.length === 0 && (
+            <div className="text-center py-20">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-ink/5 rounded-full mb-4 text-ink/20">
+                <Search size={32} />
+              </div>
+              <h3 className="text-xl font-bold mb-2">{t.noPrompts}</h3>
+              <p className="text-ink/40">{t.noPromptsSub}</p>
             </div>
-            <h3 className="text-xl font-bold mb-2">{t.noPrompts}</h3>
-            <p className="text-ink/40">{t.noPromptsSub}</p>
-          </div>
-        )}
-      </main>
+          )}
+        </main>
+      </div>
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        theme={theme}
+        setTheme={setTheme}
+        lang={lang}
+        setLang={setLang}
+        t={t}
+      />
 
       {/* Bulk Action Bar */}
       <AnimatePresence>
@@ -2189,82 +1800,19 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Login / Sign Up Modal */}
-      <AnimatePresence>
-        {isLoginModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6"
-            onClick={closeLoginModal}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-surface border border-ink/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
-            >
-              <div className="px-6 py-5 border-b border-ink/10 flex items-center justify-between">
-                <h3 className="text-lg font-display font-bold">
-                  {authMode === 'signup' ? t.createAccount : t.login}
-                </h3>
-                <button
-                  onClick={closeLoginModal}
-                  className="p-2 hover:bg-ink/10 rounded-full text-ink/40 hover:text-ink transition-all"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <form onSubmit={handleAuthSubmit} className="p-6 space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-ink/40 ml-1">Email</label>
-                  <input
-                    type="email"
-                    required
-                    autoFocus
-                    value={authEmail}
-                    onChange={(e) => setAuthEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full bg-ink/5 border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accent transition-colors"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-ink/40 ml-1">{t.password}</label>
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    value={authPassword}
-                    onChange={(e) => setAuthPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-ink/5 border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accent transition-colors"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isAuthSubmitting}
-                  className="w-full py-3 bg-accent text-accent-ink rounded-xl font-bold hover:bg-accent-hover transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isAuthSubmitting && <Loader2 className="animate-spin" size={16} />}
-                  {authMode === 'signup' ? t.createAccount : t.login}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')}
-                  className="w-full text-center text-xs text-ink/40 hover:text-ink transition-colors"
-                >
-                  {authMode === 'signup' ? t.alreadyHaveAccount : t.noAccount}
-                </button>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AuthModal
+        isOpen={isLoginModalOpen}
+        onClose={closeLoginModal}
+        authMode={authMode}
+        setAuthMode={setAuthMode}
+        authEmail={authEmail}
+        setAuthEmail={setAuthEmail}
+        authPassword={authPassword}
+        setAuthPassword={setAuthPassword}
+        isAuthSubmitting={isAuthSubmitting}
+        onSubmit={handleAuthSubmit}
+        t={t}
+      />
 
       {/* Category Management Modal */}
       <AnimatePresence>
