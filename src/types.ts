@@ -13,6 +13,7 @@ export interface Prompt {
   authorUid: string;
   authorName?: string;
   linkedPromptIds?: string[];
+  copyCount?: number;
 }
 
 export interface UserProfile {
@@ -20,6 +21,7 @@ export interface UserProfile {
   email: string;
   displayName?: string;
   favoritePromptIds?: string[];
+  role?: 'admin' | 'user';
 }
 
 export enum OperationType {

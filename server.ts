@@ -10,13 +10,6 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Allow embedding in iframes (for Chrome Extension)
-  app.use((req, res, next) => {
-    res.setHeader("Content-Security-Policy", "frame-ancestors *");
-    res.removeHeader("X-Frame-Options");
-    next();
-  });
-
   // API routes FIRST
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
