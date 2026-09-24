@@ -38,16 +38,11 @@ import {
   Filter,
   ChevronRight,
   ChevronLeft,
-  LayoutGrid,
-  List as ListIcon,
   Upload,
   Loader2,
   Calendar,
   User as UserIcon,
-  CheckSquare,
   CopyPlus,
-  ArrowUpDown,
-  Grid3x3,
   Link2,
   ArrowLeft
 } from 'lucide-react';
@@ -60,6 +55,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { PromptCard, ViewMode } from './components/PromptCard';
 import { AdminPanel } from './components/AdminPanel';
+import { Toolbar, SortBy } from './components/Toolbar';
 import { isAdminUser, canManagePrompt } from './lib/admin';
 import { MarkdownPrompt } from './components/MarkdownPrompt';
 
@@ -183,6 +179,7 @@ const TRANSLATIONS = {
     permissionDenied: "You don't have permission for this",
     deleteIrreversible: "This action cannot be undone. The prompt will be permanently removed.",
     deleteAction: "Delete",
+    scrollTop: "Back to top",
     personalLabel: "Mine",
     createdByMe: "Created by me",
     resetFilters: "Show all (reset filters)"
@@ -306,6 +303,7 @@ const TRANSLATIONS = {
     permissionDenied: "Недостаточно прав для этого действия",
     deleteIrreversible: "Это действие нельзя отменить. Промпт будет удалён навсегда.",
     deleteAction: "Удалить",
+    scrollTop: "Наверх",
     personalLabel: "Моё",
     createdByMe: "Создано мной",
     resetFilters: "Показать все (сбросить фильтры)"
@@ -379,7 +377,7 @@ export default function App() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [renamingCategory, setRenamingCategory] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'alphabetical' | 'mostCopied'>('newest');
+  const [sortBy, setSortBy] = useState<SortBy>('newest');
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
@@ -962,6 +960,28 @@ export default function App() {
     setSelectedBulkIds([]);
   }, []);
 
+  const toggleBulkMode = useCallback(() => {
+    if (isBulkMode) exitBulkMode(); else setIsBulkMode(true);
+  }, [isBulkMode, exitBulkMode]);
+
+  const openNewPromptForm = useCallback(() => {
+    setEditingPrompt(null);
+    setIsModalOpen(true);
+  }, []);
+
+  // Show the floating island once the full toolbar has scrolled above the viewport.
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [showIsland, setShowIsland] = useState(false);
+  useEffect(() => {
+    const el = toolbarRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setShowIsland(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading]);
+
   const handleBulkDelete = useCallback(async () => {
     try {
       await Promise.all(selectedBulkIds.map(id => deleteDoc(doc(db, 'prompts', id))));
@@ -1095,90 +1115,53 @@ export default function App() {
 
         <main className="flex-1 min-w-0 py-8 px-6 md:px-10 flex flex-col min-h-screen">
           {/* Controls */}
-          <div className="flex flex-wrap items-center gap-3 mb-8">
-            <div className="relative w-full max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" size={18} />
-              <input
-                type="text"
-                placeholder={t.search}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-ink/5 border border-ink/10 rounded-xl py-2.5 pl-10 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/30 hover:text-ink transition-colors"
+          <div ref={toolbarRef} className="mb-8">
+            <Toolbar
+              variant="full"
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+                canEdit={!!user}
+                isBulkMode={isBulkMode}
+                onToggleBulkMode={toggleBulkMode}
+                onAddPrompt={openNewPromptForm}
+              t={t}
+            />
+          </div>
+
+          {/* Floating "island": the same controls, once the toolbar scrolls out of view.
+              A zero-height sticky rail keeps it centred over the content column. */}
+          <div className="sticky top-3 z-40 h-0 flex justify-center pointer-events-none">
+            <AnimatePresence>
+              {showIsland && (
+                <motion.div
+                  initial={{ opacity: 0, y: -24, scale: 0.6, filter: 'blur(6px)' }}
+                  animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, y: -24, scale: 0.6, filter: 'blur(6px)' }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+                  className="pointer-events-auto h-fit rounded-full bg-surface/85 backdrop-blur-xl border border-ink/10 shadow-2xl shadow-black/30 p-1.5 pl-2"
                 >
-                  <X size={16} />
-                </button>
+                  <Toolbar
+                    variant="island"
+                searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    sortBy={sortBy}
+                    setSortBy={setSortBy}
+                    viewMode={viewMode}
+                    setViewMode={setViewMode}
+                    canEdit={!!user}
+                    isBulkMode={isBulkMode}
+                    onToggleBulkMode={toggleBulkMode}
+                    onAddPrompt={openNewPromptForm}
+                    onScrollTop={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    t={t}
+                  />
+                </motion.div>
               )}
-            </div>
-
-            <div className="flex-1" />
-
-            <div className="relative shrink-0">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="appearance-none bg-ink/5 border border-ink/10 rounded-full pl-8 pr-4 py-2 text-xs font-medium text-ink/70 focus:outline-none focus:border-accent/50 hover:bg-ink/10 transition-all cursor-pointer"
-              >
-                <option value="newest" className="bg-surface">{t.sortNewest}</option>
-                <option value="oldest" className="bg-surface">{t.sortOldest}</option>
-                <option value="alphabetical" className="bg-surface">{t.sortAlphabetical}</option>
-                <option value="mostCopied" className="bg-surface">{t.sortMostCopied}</option>
-              </select>
-              <ArrowUpDown size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30 pointer-events-none" />
-            </div>
-
-            {user && (
-              <button
-                onClick={() => {
-                  if (isBulkMode) exitBulkMode(); else setIsBulkMode(true);
-                }}
-                title={t.selectMode}
-                className={cn(
-                  "p-2.5 rounded-full border transition-all shrink-0",
-                  isBulkMode ? "bg-accent border-accent text-accent-ink" : "bg-ink/5 border-ink/10 text-ink/40 hover:text-accent hover:bg-ink/10"
-                )}
-              >
-                <CheckSquare size={18} />
-              </button>
-            )}
-
-            <div className="flex items-center gap-1 bg-ink/5 border border-ink/10 rounded-xl p-1">
-              {([
-                { mode: 'grid', icon: LayoutGrid, label: t.viewGrid },
-                { mode: 'compact', icon: Grid3x3, label: t.viewCompact },
-                { mode: 'list', icon: ListIcon, label: t.viewList },
-              ] as const).map(({ mode, icon: Icon, label }) => (
-                <button
-                  key={mode}
-                  onClick={() => setViewMode(mode)}
-                  title={label}
-                  aria-label={label}
-                  className={cn(
-                    "p-1.5 rounded-lg transition-colors",
-                    viewMode === mode ? "bg-accent text-accent-ink" : "text-ink/40 hover:text-ink"
-                  )}
-                >
-                  <Icon size={18} />
-                </button>
-              ))}
-            </div>
-
-            {user && (
-              <button
-                onClick={() => {
-                  setEditingPrompt(null);
-                  setIsModalOpen(true);
-                }}
-                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-accent text-accent-ink rounded-xl font-bold hover:bg-accent-hover transition-all active:scale-95 shadow-lg shadow-accent/20 whitespace-nowrap"
-              >
-                <Plus size={20} />
-                <span>{t.addPrompt}</span>
-              </button>
-            )}
+            </AnimatePresence>
           </div>
 
           {/* Grid */}
