@@ -1,7 +1,9 @@
 import { auth } from '../firebase';
 import { FirestoreErrorInfo, OperationType } from '../types';
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+// Logs a structured Firestore error and returns its code. It deliberately does
+// not throw: callers invoke it from catch blocks and still need to show a toast.
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): string | undefined {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -21,5 +23,5 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  return (error as { code?: string })?.code;
 }

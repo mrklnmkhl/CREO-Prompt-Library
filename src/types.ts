@@ -21,6 +21,7 @@ export interface UserProfile {
   email: string;
   displayName?: string;
   favoritePromptIds?: string[];
+  role?: 'admin' | 'user';
 }
 
 export enum OperationType {

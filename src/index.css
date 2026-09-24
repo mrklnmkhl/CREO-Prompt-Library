@@ -96,9 +96,13 @@ html[data-theme="light"] {
 }
 
 @layer components {
-  /* Prompt card hover: proximity-brightened contour + cursor-tracked ring */
+  /* Prompt card hover: proximity-brightened contour + cursor-tracked ring.
+     The card must not use overflow-hidden (it would clip the ring, which sits
+     on the border) or a shadow-* utility (utilities outrank this layer and
+     would replace the hover glow). */
   .prompt-card {
     position: relative;
+    box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.35);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
   .prompt-card:hover {

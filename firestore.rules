@@ -24,7 +24,7 @@ service cloud.firestore {
     // Collection: users
     // Fields:
     //   - email: string (required)
-    //   - role: string (required, ['admin', 'user'])
+    //   - role: string (optional, ['admin', 'user']; set by admins only)
     //   - displayName: string
     //   - favoritePromptIds: list (optional)
     // ===============================================================
@@ -40,8 +40,21 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Owner email is a permanent admin (keep in sync with src/lib/admin.ts);
+    // other admins are granted via users/{uid}.role == 'admin' by an existing admin.
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.email.lower() == "mme.creo@lidera.agency";
+      return isAuthenticated() && (
+        request.auth.token.email.lower() == "mme.creo@lidera.agency" ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'admin'
+      );
+    }
+
+    function isPromptAuthor() {
+      return isAuthenticated() && resource.data.authorUid == request.auth.uid;
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
     }
 
     function isValidPrompt(data) {
@@ -58,6 +71,7 @@ service cloud.firestore {
     function isValidUser(data) {
       return data.keys().hasAll(['email']) &&
              data.email is string &&
+             (!('role' in data) || data.role in ['admin', 'user']) &&
              (!('favoritePromptIds' in data) || data.favoritePromptIds == null || (data.favoritePromptIds is list && data.favoritePromptIds.size() < 500));
     }
 
@@ -66,21 +80,35 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data);
-      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+      allow read: if isOwner(userId) || isAdmin();
+      // Users can't grant themselves a role; only admins change roles.
+      allow create: if isOwner(userId) && !('role' in request.resource.data) && isValidUser(request.resource.data);
+      allow update: if isValidUser(request.resource.data) && (
+        (isOwner(userId) && !changedKeys().hasAny(['role'])) || isAdmin()
+      );
     }
 
     match /prompts/{promptId} {
       allow read: if true; // Publicly readable for the library
-      allow create: if isAuthenticated() && isValidPrompt(request.resource.data);
-      allow update: if isAuthenticated() && isValidPrompt(request.resource.data);
-      allow delete: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+                       request.resource.data.authorUid == request.auth.uid &&
+                       isValidPrompt(request.resource.data);
+      // Authors edit their own prompts, admins edit any; authorship can't be reassigned.
+      // Any signed-in user may bump copyCount by exactly one (and nothing else).
+      allow update: if isAuthenticated() && (
+        ((isPromptAuthor() || isAdmin()) &&
+          request.resource.data.authorUid == resource.data.authorUid &&
+          isValidPrompt(request.resource.data)) ||
+        (changedKeys().hasOnly(['copyCount']) &&
+          request.resource.data.copyCount == resource.data.get('copyCount', 0) + 1)
+      );
+      allow delete: if isPromptAuthor() || isAdmin();
     }
 
     match /categories/{categoryId} {
       allow read: if true;
-      allow create, update, delete: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
     }
   }
 }

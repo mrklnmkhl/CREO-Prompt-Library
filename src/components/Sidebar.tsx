@@ -7,6 +7,7 @@ import {
   LogIn,
   LogOut,
   Pencil,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { getCategoryColors } from '../lib/categoryColor';
@@ -23,6 +24,8 @@ export function Sidebar({
   onToggleSidebar,
   onOpenSettings,
   onManageCategories,
+  onOpenAdmin,
+  isAdmin,
   user,
   onOpenLogin,
   onLogout,
@@ -40,6 +43,8 @@ export function Sidebar({
   onToggleSidebar: () => void;
   onOpenSettings: () => void;
   onManageCategories: () => void;
+  onOpenAdmin: () => void;
+  isAdmin: boolean;
   user: any;
   onOpenLogin: () => void;
   onLogout: () => void;
@@ -107,7 +112,7 @@ export function Sidebar({
             <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-ink/40">
               {t.categoriesLabel}
             </span>
-            {user && (
+            {isAdmin && (
               <button
                 onClick={onManageCategories}
                 title={t.manageCategories}
@@ -167,8 +172,22 @@ export function Sidebar({
       </div>
 
       <div className="flex flex-col gap-1 border-t border-ink/10 pt-3.5">
+        {isAdmin && (
+          <button
+            onClick={onOpenAdmin}
+            title={t.adminPanel}
+            className={cn(
+              "flex items-center gap-2.5 px-2.5 py-2 rounded-[11px] text-[13px] font-semibold text-ink/60 hover:bg-ink/5 hover:text-ink whitespace-nowrap transition-colors",
+              navJustify
+            )}
+          >
+            <ShieldCheck size={16} className="shrink-0" />
+            {sidebarOpen && <span>{t.adminPanel}</span>}
+          </button>
+        )}
         <button
           onClick={onOpenSettings}
+          title={t.settings}
           className={cn(
             "flex items-center gap-2.5 px-2.5 py-2 rounded-[11px] text-[13px] font-semibold text-ink/60 hover:bg-ink/5 hover:text-ink whitespace-nowrap transition-colors",
             navJustify

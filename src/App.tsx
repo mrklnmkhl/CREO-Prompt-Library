@@ -44,11 +44,12 @@ import {
   Loader2,
   Calendar,
   User as UserIcon,
-  Download,
-  FileUp,
   CheckSquare,
   CopyPlus,
-  ArrowUpDown
+  ArrowUpDown,
+  Grid3x3,
+  Link2,
+  ArrowLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster, toast } from 'sonner';
@@ -57,7 +58,9 @@ import { useTheme } from './hooks/useTheme';
 import { Sidebar } from './components/Sidebar';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
-import { PromptCard } from './components/PromptCard';
+import { PromptCard, ViewMode } from './components/PromptCard';
+import { AdminPanel } from './components/AdminPanel';
+import { isAdminUser, canManagePrompt } from './lib/admin';
 import { MarkdownPrompt } from './components/MarkdownPrompt';
 
 const TRANSLATIONS = {
@@ -154,7 +157,32 @@ const TRANSLATIONS = {
     settings: "Settings",
     theme: "Theme",
     language: "Language",
-    logout: "Log out"
+    logout: "Log out",
+    viewGrid: "Grid",
+    viewCompact: "Compact grid",
+    viewList: "List",
+    library: "Library",
+    exportHint: "Download all prompts as JSON",
+    importHint: "Add prompts from a JSON file",
+    importLoginRequired: "Log in to import",
+    share: "Copy link",
+    linkCopied: "Link copied",
+    promptNotFound: "The shared prompt was not found",
+    back: "Back",
+    open: "Open",
+    adminPanel: "Admin panel",
+    statPrompts: "Prompts",
+    statUsers: "Users",
+    statAdmins: "Admins",
+    promptsCountLabel: "prompts",
+    makeAdmin: "Make admin",
+    revokeAdmin: "Revoke admin",
+    roleOwner: "Owner",
+    roleUpdated: "Role updated",
+    you: "you",
+    permissionDenied: "You don't have permission for this",
+    deleteIrreversible: "This action cannot be undone. The prompt will be permanently removed.",
+    deleteAction: "Delete"
   },
   ru: {
     search: "Поиск",
@@ -249,7 +277,32 @@ const TRANSLATIONS = {
     settings: "Настройки",
     theme: "Тема",
     language: "Язык",
-    logout: "Выйти"
+    logout: "Выйти",
+    viewGrid: "Сетка",
+    viewCompact: "Компактная сетка",
+    viewList: "Список",
+    library: "Библиотека",
+    exportHint: "Скачать все промпты в JSON",
+    importHint: "Добавить промпты из JSON-файла",
+    importLoginRequired: "Войдите, чтобы импортировать",
+    share: "Скопировать ссылку",
+    linkCopied: "Ссылка скопирована",
+    promptNotFound: "Промпт по ссылке не найден",
+    back: "Назад",
+    open: "Открыть",
+    adminPanel: "Админ-панель",
+    statPrompts: "Промптов",
+    statUsers: "Пользователи",
+    statAdmins: "Админы",
+    promptsCountLabel: "промптов",
+    makeAdmin: "Сделать админом",
+    revokeAdmin: "Снять админа",
+    roleOwner: "Владелец",
+    roleUpdated: "Роль обновлена",
+    you: "вы",
+    permissionDenied: "Недостаточно прав для этого действия",
+    deleteIrreversible: "Это действие нельзя отменить. Промпт будет удалён навсегда.",
+    deleteAction: "Удалить"
   }
 };
 
@@ -285,16 +338,30 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const stored = localStorage.getItem('creo-view-mode');
+    return stored === 'compact' || stored === 'list' ? stored : 'grid';
+  });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [categories, setCategories] = useState(['Outdoor', 'Studio', 'Interiors', 'People (GEO)', 'Verticals', 'Hands']);
-  const [viewingPromptId, setViewingPromptId] = useState<string | null>(null);
+  // Seeded from ?prompt=<id> so shared links open the prompt once data arrives.
+  const [viewingPromptId, setViewingPromptId] = useState<string | null>(
+    () => new URLSearchParams(window.location.search).get('prompt')
+  );
+  // Prompts visited before the current one via "linked prompts", for the back button.
+  const [viewHistory, setViewHistory] = useState<string[]>([]);
+  const [promptsLoaded, setPromptsLoaded] = useState(false);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isDirty, setIsDirty] = useState(false);
   const [showUnsavedConfirm, setShowUnsavedConfirm] = useState(false);
+  // Where the user was heading when the unsaved-changes prompt appeared:
+  // 'close' = leave the modal, 'exitEdit' = back from edit form to the prompt view.
+  const [leaveIntent, setLeaveIntent] = useState<'close' | 'exitEdit'>('close');
+  const afterSaveIntent = useRef<'close' | 'exitEdit' | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [placeholderValues, setPlaceholderValues] = useState<Record<string, string>>({});
   const [modalView, setModalView] = useState<'form' | 'link'>('form');
@@ -309,7 +376,7 @@ export default function App() {
   const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const importInputRef = useRef<HTMLInputElement>(null);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [authEmail, setAuthEmail] = useState('');
@@ -326,8 +393,14 @@ export default function App() {
     localStorage.setItem('creo-sidebar-open', String(sidebarOpen));
   }, [sidebarOpen]);
 
+  useEffect(() => {
+    localStorage.setItem('creo-view-mode', viewMode);
+  }, [viewMode]);
+
   const closeModal = useCallback(() => {
     setViewingPromptId(null);
+    setViewHistory([]);
+    setShowDeleteConfirm(false);
     setIsModalOpen(false);
     setIsCategoryModalOpen(false);
     setEditingPrompt(null);
@@ -420,6 +493,62 @@ export default function App() {
     return prompts.find(p => p.id === viewingPromptId) || null;
   }, [viewingPromptId, prompts]);
 
+  const isAdmin = isAdminUser(user, userProfile);
+  const canManage = useCallback(
+    (prompt: Prompt) => canManagePrompt(prompt, user, isAdmin),
+    [user, isAdmin]
+  );
+
+  // Keep ?prompt=<id> in the address bar in sync with the open prompt, so the
+  // current URL is always shareable. replaceState keeps browser Back untouched.
+  useEffect(() => {
+    if (!promptsLoaded) return;
+    const url = new URL(window.location.href);
+    if (viewingPromptId) url.searchParams.set('prompt', viewingPromptId);
+    else url.searchParams.delete('prompt');
+    window.history.replaceState(null, '', url);
+  }, [viewingPromptId, promptsLoaded]);
+
+  // A shared link may point at a deleted prompt: tell the user once data is in.
+  const sharedLinkChecked = useRef(false);
+  useEffect(() => {
+    if (!promptsLoaded || sharedLinkChecked.current) return;
+    sharedLinkChecked.current = true;
+    if (viewingPromptId && !prompts.some(p => p.id === viewingPromptId)) {
+      toast.error(t.promptNotFound);
+      setViewingPromptId(null);
+    }
+  }, [promptsLoaded, prompts, viewingPromptId, t.promptNotFound]);
+
+  // Jumping between linked prompts should start at the top, not mid-scroll.
+  useEffect(() => {
+    contentScrollRef.current?.scrollTo({ top: 0 });
+  }, [viewingPromptId]);
+
+  const openLinkedPrompt = useCallback((id: string) => {
+    if (viewingPromptId) setViewHistory(prev => [...prev, viewingPromptId]);
+    setViewingPromptId(id);
+  }, [viewingPromptId]);
+
+  const goBackInHistory = useCallback(() => {
+    const previousId = viewHistory[viewHistory.length - 1];
+    if (!previousId) return;
+    setViewHistory(viewHistory.slice(0, -1));
+    setViewingPromptId(previousId);
+  }, [viewHistory]);
+
+  const previousPrompt = useMemo(() => {
+    const previousId = viewHistory[viewHistory.length - 1];
+    return previousId ? prompts.find(p => p.id === previousId) || null : null;
+  }, [viewHistory, prompts]);
+
+  const copyShareLink = useCallback((id: string) => {
+    const url = new URL(window.location.origin + window.location.pathname);
+    url.searchParams.set('prompt', id);
+    navigator.clipboard.writeText(url.toString());
+    toast.success(t.linkCopied);
+  }, [t.linkCopied]);
+
   const extractPlaceholders = (text: string) => {
     const regex = /\[([^\]]+)\]/g;
     const matches = Array.from(text.matchAll(regex));
@@ -509,8 +638,10 @@ export default function App() {
         };
       }) as Prompt[];
       setPrompts(promptData);
+      setPromptsLoaded(true);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'prompts');
+      setPromptsLoaded(true);
     });
 
     return () => unsubscribe();
@@ -647,10 +778,15 @@ export default function App() {
       if (editingPrompt?.id) {
         await updateDoc(doc(db, 'prompts', editingPrompt.id), promptData);
         toast.success(t.promptUpdated);
-        setEditingPrompt(null);
-        setSelectedFile(null);
-        setPreviewUrl(null);
-        setIsDirty(false);
+        if (afterSaveIntent.current === 'close') {
+          closeModal();
+        } else {
+          setEditingPrompt(null);
+          setSelectedFile(null);
+          setPreviewUrl(null);
+          setIsDirty(false);
+          setShowUnsavedConfirm(false);
+        }
       } else {
         await addDoc(collection(db, 'prompts'), {
           ...promptData,
@@ -661,12 +797,51 @@ export default function App() {
         closeModal();
       }
     } catch (error) {
-      handleFirestoreError(error, editingPrompt ? OperationType.UPDATE : OperationType.CREATE, 'prompts');
-      toast.error(t.saveFail);
+      const code = handleFirestoreError(error, editingPrompt ? OperationType.UPDATE : OperationType.CREATE, 'prompts');
+      toast.error(code === 'permission-denied' ? t.permissionDenied : t.saveFail);
     } finally {
+      afterSaveIntent.current = null;
       setIsUploading(false);
     }
-  }, [user, selectedFile, selectedLinkedPromptIds, editingPrompt, closeModal, t]);
+  }, [user, userProfile, selectedFile, selectedLinkedPromptIds, editingPrompt, closeModal, t]);
+
+  // Leaving the form (backdrop click, Cancel, X) goes through here so unsaved
+  // edits are never dropped silently.
+  const leaveForm = useCallback((intent: 'close' | 'exitEdit') => {
+    if (intent === 'exitEdit' && editingPrompt) {
+      setEditingPrompt(null);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setIsDirty(false);
+      setShowUnsavedConfirm(false);
+      setModalView('form');
+    } else {
+      closeModal();
+    }
+  }, [editingPrompt, closeModal]);
+
+  const requestLeave = useCallback((intent: 'close' | 'exitEdit') => {
+    if (isDirty) {
+      setLeaveIntent(intent);
+      setShowUnsavedConfirm(true);
+    } else {
+      leaveForm(intent);
+    }
+  }, [isDirty, leaveForm]);
+
+  const applyUnsavedChanges = useCallback(() => {
+    setShowUnsavedConfirm(false);
+    // Show the form first (it may be hidden behind the linked-prompt picker) so
+    // the browser can point at an invalid field instead of failing silently.
+    setModalView('form');
+    requestAnimationFrame(() => {
+      const form = document.getElementById('prompt-form') as HTMLFormElement | null;
+      if (!form) return;
+      // If the form is invalid no submit happens; the intent is reset by the next save.
+      afterSaveIntent.current = leaveIntent;
+      form.requestSubmit();
+    });
+  }, [leaveIntent]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -685,10 +860,10 @@ export default function App() {
       await deleteDoc(doc(db, 'prompts', id));
       toast.success(t.promptDeleted);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `prompts/${id}`);
-      toast.error(t.saveFail);
+      const code = handleFirestoreError(error, OperationType.DELETE, `prompts/${id}`);
+      toast.error(code === 'permission-denied' ? t.permissionDenied : t.saveFail);
     }
-  }, [t.promptDeleted, t.saveFail]);
+  }, [t.promptDeleted, t.saveFail, t.permissionDenied]);
 
   const copyToClipboard = useCallback((text: string, promptId?: string) => {
     let finalPrompt = text;
@@ -702,36 +877,48 @@ export default function App() {
     }
     navigator.clipboard.writeText(finalPrompt);
     toast.success(t.copySuccess);
-    if (promptId) {
+    if (promptId && user) {
       updateDoc(doc(db, 'prompts', promptId), { copyCount: increment(1) }).catch((error) => {
         console.error("Error incrementing copy count:", error);
       });
     }
-  }, [viewingPrompt, placeholderValues, t.copySuccess]);
+  }, [viewingPrompt, placeholderValues, user, t.copySuccess]);
 
   const handleDuplicatePrompt = useCallback(async (prompt: Prompt) => {
     if (!user) return;
+    // Legacy documents can miss fields or exceed the validation limits in
+    // firestore.rules; normalise everything so the copy is always a valid prompt.
+    const suffix = ` ${t.copySuffix}`;
+    const baseTitle = (prompt.title || 'Untitled').slice(0, 199 - suffix.length);
     try {
-      await addDoc(collection(db, 'prompts'), {
-        title: `${prompt.title} ${t.copySuffix}`,
-        content: prompt.content,
-        category: prompt.category || '',
-        type: prompt.type,
-        tags: prompt.tags || [],
-        exampleUrl: prompt.exampleUrl || '',
-        linkedPromptIds: prompt.linkedPromptIds || [],
+      const newRef = await addDoc(collection(db, 'prompts'), {
+        title: `${baseTitle}${suffix}`,
+        content: prompt.content || '',
+        category: typeof prompt.category === 'string' ? prompt.category.slice(0, 49) : '',
+        type: prompt.type === 'video' ? 'video' : 'image',
+        tags: Array.isArray(prompt.tags) ? prompt.tags.filter(tag => typeof tag === 'string').slice(0, 19) : [],
+        exampleUrl: typeof prompt.exampleUrl === 'string' ? prompt.exampleUrl : '',
+        linkedPromptIds: Array.isArray(prompt.linkedPromptIds) ? prompt.linkedPromptIds.slice(0, 19) : [],
         copyCount: 0,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         authorUid: user.uid,
         authorName: userProfile?.displayName || user.displayName || user.email?.split('@')[0] || 'Unknown'
       });
-      toast.success(t.duplicateSuccess);
+      toast.success(t.duplicateSuccess, {
+        action: {
+          label: t.open,
+          onClick: () => {
+            setViewHistory([]);
+            setViewingPromptId(newRef.id);
+          }
+        }
+      });
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'prompts');
-      toast.error(t.saveFail);
+      const code = handleFirestoreError(error, OperationType.CREATE, 'prompts');
+      toast.error(code === 'permission-denied' ? t.permissionDenied : t.saveFail);
     }
-  }, [user, userProfile, t.copySuffix, t.duplicateSuccess, t.saveFail]);
+  }, [user, userProfile, t.copySuffix, t.duplicateSuccess, t.saveFail, t.permissionDenied, t.open]);
 
   const toggleBulkSelect = useCallback((id: string) => {
     setSelectedBulkIds(prev => prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]);
@@ -749,10 +936,10 @@ export default function App() {
       setShowBulkDeleteConfirm(false);
       exitBulkMode();
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, 'prompts');
-      toast.error(t.saveFail);
+      const code = handleFirestoreError(error, OperationType.DELETE, 'prompts');
+      toast.error(code === 'permission-denied' ? t.permissionDenied : t.saveFail);
     }
-  }, [selectedBulkIds, exitBulkMode, t.promptDeleted, t.saveFail]);
+  }, [selectedBulkIds, exitBulkMode, t.promptDeleted, t.saveFail, t.permissionDenied]);
 
   const handleBulkCategoryChange = useCallback(async (newCategory: string) => {
     if (!newCategory) return;
@@ -761,10 +948,10 @@ export default function App() {
       toast.success(t.promptUpdated);
       exitBulkMode();
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, 'prompts');
-      toast.error(t.saveFail);
+      const code = handleFirestoreError(error, OperationType.UPDATE, 'prompts');
+      toast.error(code === 'permission-denied' ? t.permissionDenied : t.saveFail);
     }
-  }, [selectedBulkIds, exitBulkMode, t.promptUpdated, t.saveFail]);
+  }, [selectedBulkIds, exitBulkMode, t.promptUpdated, t.saveFail, t.permissionDenied]);
 
   const handleExport = useCallback(() => {
     const exportData = prompts.map(({ id, ...rest }) => rest);
@@ -833,8 +1020,10 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-bg text-ink font-sans selection:bg-accent/30 relative overflow-x-hidden">
-      <Toaster position="top-right" theme="dark" />
+    // overflow-x-clip (not -hidden): -hidden would make this div a scroll
+    // container and the sidebar's position:sticky would stop working.
+    <div className="min-h-screen bg-bg text-ink font-sans selection:bg-accent/30 relative overflow-x-clip">
+      <Toaster position="top-right" theme={isLight ? 'light' : 'dark'} />
       
       {/* Background Gradient */}
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -855,6 +1044,8 @@ export default function App() {
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onManageCategories={() => setIsCategoryModalOpen(true)}
+          onOpenAdmin={() => setIsAdminPanelOpen(true)}
+          isAdmin={isAdmin}
           user={user}
           onOpenLogin={() => setIsLoginModalOpen(true)}
           onLogout={handleLogout}
@@ -862,7 +1053,7 @@ export default function App() {
           t={t}
         />
 
-        <main className="flex-1 min-w-0 py-8 px-6 md:px-10">
+        <main className="flex-1 min-w-0 py-8 px-6 md:px-10 flex flex-col min-h-screen">
           {/* Controls */}
           <div className="flex flex-wrap items-center gap-3 mb-8">
             <div className="relative w-full max-w-md">
@@ -900,60 +1091,40 @@ export default function App() {
               <ArrowUpDown size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30 pointer-events-none" />
             </div>
 
-            <button
-              onClick={handleExport}
-              title={t.exportPrompts}
-              className="p-2.5 bg-ink/5 border border-ink/10 rounded-full text-ink/40 hover:text-accent hover:bg-ink/10 transition-all shrink-0"
-            >
-              <Download size={18} />
-            </button>
-
             {user && (
-              <>
-                <input
-                  ref={importInputRef}
-                  type="file"
-                  accept="application/json"
-                  className="hidden"
-                  onChange={handleImportFile}
-                />
-                <button
-                  onClick={() => importInputRef.current?.click()}
-                  disabled={isImporting}
-                  title={t.importPrompts}
-                  className="p-2.5 bg-ink/5 border border-ink/10 rounded-full text-ink/40 hover:text-accent hover:bg-ink/10 transition-all shrink-0 disabled:opacity-50"
-                >
-                  {isImporting ? <Loader2 size={18} className="animate-spin" /> : <FileUp size={18} />}
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (isBulkMode) exitBulkMode(); else setIsBulkMode(true);
-                  }}
-                  title={t.selectMode}
-                  className={cn(
-                    "p-2.5 rounded-full border transition-all shrink-0",
-                    isBulkMode ? "bg-accent border-accent text-accent-ink" : "bg-ink/5 border-ink/10 text-ink/40 hover:text-accent hover:bg-ink/10"
-                  )}
-                >
-                  <CheckSquare size={18} />
-                </button>
-              </>
+              <button
+                onClick={() => {
+                  if (isBulkMode) exitBulkMode(); else setIsBulkMode(true);
+                }}
+                title={t.selectMode}
+                className={cn(
+                  "p-2.5 rounded-full border transition-all shrink-0",
+                  isBulkMode ? "bg-accent border-accent text-accent-ink" : "bg-ink/5 border-ink/10 text-ink/40 hover:text-accent hover:bg-ink/10"
+                )}
+              >
+                <CheckSquare size={18} />
+              </button>
             )}
 
-            <div className="flex items-center gap-2 border-l border-ink/10 pl-2">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={cn("p-2 rounded-lg", viewMode === 'grid' ? "bg-ink/10 text-ink" : "text-ink/40")}
-              >
-                <LayoutGrid size={20} />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={cn("p-2 rounded-lg", viewMode === 'list' ? "bg-ink/10 text-ink" : "text-ink/40")}
-              >
-                <ListIcon size={20} />
-              </button>
+            <div className="flex items-center gap-1 bg-ink/5 border border-ink/10 rounded-xl p-1">
+              {([
+                { mode: 'grid', icon: LayoutGrid, label: t.viewGrid },
+                { mode: 'compact', icon: Grid3x3, label: t.viewCompact },
+                { mode: 'list', icon: ListIcon, label: t.viewList },
+              ] as const).map(({ mode, icon: Icon, label }) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  title={label}
+                  aria-label={label}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-colors",
+                    viewMode === mode ? "bg-accent text-accent-ink" : "text-ink/40 hover:text-ink"
+                  )}
+                >
+                  <Icon size={18} />
+                </button>
+              ))}
             </div>
 
             {user && (
@@ -979,8 +1150,10 @@ export default function App() {
               exit={{ opacity: 0, transition: { duration: 0.08 } }}
               transition={{ duration: 0.18, ease: "easeInOut" }}
               className={cn(
-                "grid gap-6 relative",
-                viewMode === 'grid' ? "grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1"
+                "grid relative",
+                viewMode === 'grid' && "gap-6 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+                viewMode === 'compact' && "gap-4 grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7",
+                viewMode === 'list' && "gap-4 grid-cols-1"
               )}
             >
               {filteredPrompts.map((prompt) => (
@@ -995,7 +1168,9 @@ export default function App() {
                   setViewingPromptId={setViewingPromptId}
                   copyToClipboard={copyToClipboard}
                   onDuplicate={handleDuplicatePrompt}
+                  onShare={copyShareLink}
                   isBulkMode={isBulkMode}
+                  isSelectable={canManage(prompt)}
                   isSelected={selectedBulkIds.includes(prompt.id!)}
                   onToggleSelect={toggleBulkSelect}
                   t={t}
@@ -1013,6 +1188,22 @@ export default function App() {
               <p className="text-ink/40">{t.noPromptsSub}</p>
             </div>
           )}
+
+          <footer className="mt-auto pt-16">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-t border-ink/10 pt-8">
+              <div className="flex items-center gap-3 opacity-50">
+                <div className="w-6 h-6 bg-ink/20 rounded flex items-center justify-center font-display font-bold text-bg text-xs">
+                  C
+                </div>
+                <span className="text-sm font-medium">CREO Prompt Library &copy; 2026</span>
+              </div>
+              <div className="flex items-center gap-6 text-sm text-ink/40">
+                <a href="#" className="hover:text-ink transition-colors">Privacy</a>
+                <a href="#" className="hover:text-ink transition-colors">Terms</a>
+                <a href="#" className="hover:text-ink transition-colors">Support</a>
+              </div>
+            </div>
+          </footer>
         </main>
       </div>
 
@@ -1023,6 +1214,23 @@ export default function App() {
         setTheme={setTheme}
         lang={lang}
         setLang={setLang}
+        onExport={handleExport}
+        onImportFile={handleImportFile}
+        canImport={!!user}
+        isImporting={isImporting}
+        promptCount={prompts.length}
+        t={t}
+      />
+
+      <AdminPanel
+        isOpen={isAdminPanelOpen && isAdmin}
+        onClose={() => setIsAdminPanelOpen(false)}
+        prompts={prompts}
+        currentUid={user?.uid}
+        onManageCategories={() => {
+          setIsAdminPanelOpen(false);
+          setIsCategoryModalOpen(true);
+        }}
         t={t}
       />
 
@@ -1113,13 +1321,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => {
-                if (isDirty) {
-                  setShowUnsavedConfirm(true);
-                } else {
-                  closeModal();
-                }
-              }}
+              onClick={() => requestLeave('close')}
               className="absolute inset-0 bg-black/90 backdrop-blur-md"
             />
             <div className="relative flex flex-col items-center gap-4 w-full max-w-7xl">
@@ -1130,7 +1332,7 @@ export default function App() {
                 transition={{ type: "spring", damping: 25, stiffness: 500 }}
                 className="relative w-full bg-surface border border-ink/10 rounded-3xl overflow-hidden flex flex-col md:flex-row h-[85vh] shadow-2xl"
               >
-                {modalView === 'link' ? (
+                {modalView === 'link' && (
                   <div className="flex-1 flex flex-col bg-surface overflow-hidden">
                     <div className="px-8 py-6 border-b border-ink/10 flex items-center justify-between bg-surface z-10">
                       <div className="flex items-center gap-4">
@@ -1143,7 +1345,7 @@ export default function App() {
                         <h2 className="text-xl font-bold text-ink">{t.addLinkedPrompt}</h2>
                       </div>
                       <button 
-                        onClick={closeModal}
+                        onClick={() => requestLeave('close')}
                         className="p-2 hover:bg-ink/10 rounded-full text-ink/60 hover:text-ink transition-all"
                       >
                         <X size={24} />
@@ -1259,8 +1461,9 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                ) : (
-                  <>
+                )}
+                  {/* The form stays mounted while picking linked prompts so typed values survive. */}
+                  <div className={cn("contents", modalView === 'link' && "hidden")}>
                     {/* Media Side */}
                     <div className="w-full md:w-[calc(85vh*0.75)] shrink-0 bg-black flex items-center justify-center relative group min-h-[300px] md:min-h-0">
                   {(editingPrompt || (isModalOpen && !viewingPrompt)) ? (
@@ -1385,7 +1588,21 @@ export default function App() {
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                            {previousPrompt && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={goBackInHistory}
+                                  title={previousPrompt.title}
+                                  className="flex items-center gap-1.5 pl-2 pr-3 py-1 rounded-full bg-ink/5 hover:bg-accent hover:text-accent-ink text-ink/60 text-[10px] font-bold uppercase tracking-widest transition-all max-w-[220px]"
+                                >
+                                  <ArrowLeft size={12} className="shrink-0" />
+                                  <span className="truncate">{t.back}: {previousPrompt.title}</span>
+                                </button>
+                                <div className="w-[1px] h-3 bg-ink/10" />
+                              </>
+                            )}
                             <span className="inline-block px-3 py-1 bg-accent/10 text-accent rounded-full text-[10px] font-bold uppercase tracking-widest">
                               {viewingPrompt?.category || t.all}
                             </span>
@@ -1480,7 +1697,7 @@ export default function App() {
                   </div>
 
                   {/* Scrollable Content */}
-                    <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8 custom-scrollbar">
+                    <div ref={contentScrollRef} className="flex-1 overflow-y-auto px-8 py-6 space-y-8 custom-scrollbar">
                       <div className="space-y-2">
                         <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink/30">{t.thePrompt}</h4>
                         <div className="relative group">
@@ -1626,7 +1843,7 @@ export default function App() {
                                 <button
                                   key={id}
                                   type="button"
-                                  onClick={() => setViewingPromptId(linked.id!)}
+                                  onClick={() => openLinkedPrompt(linked.id!)}
                                   className="w-full flex items-center justify-between p-4 bg-ink/5 border border-ink/10 rounded-2xl hover:bg-ink/10 transition-all group/link"
                                 >
                                   <div className="flex items-center gap-3">
@@ -1660,6 +1877,7 @@ export default function App() {
                         <>
                           <button 
                             type="submit"
+                            onClick={() => { afterSaveIntent.current = null; }}
                             disabled={isUploading}
                             className="flex-[2] py-3.5 bg-accent text-accent-ink rounded-2xl font-bold hover:bg-accent-hover transition-all active:scale-95 shadow-xl shadow-accent/20 disabled:opacity-50 flex items-center justify-center gap-2"
                           >
@@ -1669,15 +1887,7 @@ export default function App() {
 
                           <button 
                             type="button"
-                            onClick={() => {
-                              if (isDirty) {
-                                setShowUnsavedConfirm(true);
-                              } else if (editingPrompt) {
-                                setEditingPrompt(null);
-                              } else {
-                                closeModal();
-                              }
-                            }}
+                            onClick={() => requestLeave(editingPrompt ? 'exitEdit' : 'close')}
                             className="flex-1 py-3.5 bg-ink/5 hover:bg-ink/10 rounded-2xl font-bold transition-all active:scale-95 text-ink/60"
                           >
                             {t.cancel}
@@ -1704,7 +1914,19 @@ export default function App() {
                             <span className="truncate">{t.copyToClipboard}</span>
                           </button>
                           
-                          {user && (
+                          {viewingPrompt && (
+                            <button
+                              type="button"
+                              onClick={() => copyShareLink(viewingPrompt.id!)}
+                              title={t.share}
+                              aria-label={t.share}
+                              className="w-14 h-14 shrink-0 flex items-center justify-center bg-ink/10 hover:bg-ink/20 rounded-2xl text-ink/60 hover:text-ink transition-all active:scale-95"
+                            >
+                              <Link2 size={20} />
+                            </button>
+                          )}
+
+                          {viewingPrompt && canManage(viewingPrompt) && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1712,6 +1934,7 @@ export default function App() {
                                 e.stopPropagation();
                                 setEditingPrompt(viewingPrompt);
                               }}
+                              title={t.editPrompt}
                               className="w-14 h-14 shrink-0 flex items-center justify-center bg-ink/10 hover:bg-ink/20 rounded-2xl text-ink/60 hover:text-ink transition-all active:scale-95"
                             >
                               <Edit2 size={20} />
@@ -1737,8 +1960,8 @@ export default function App() {
                     </div>
                   </form>
                 </div>
-              </>
-            )}
+              </div>
+
 
                   {/* Custom Delete Confirmation Overlay */}
                   <AnimatePresence>
@@ -1759,7 +1982,7 @@ export default function App() {
                             <Trash2 size={32} />
                           </div>
                           <h3 className="text-xl font-bold mb-2">{t.deleteConfirm}</h3>
-                          <p className="text-ink/40 text-sm mb-8">This action cannot be undone. The prompt will be permanently removed.</p>
+                          <p className="text-ink/40 text-sm mb-8">{t.deleteIrreversible}</p>
                           <div className="flex gap-3">
                             <button 
                               onClick={() => setShowDeleteConfirm(false)}
@@ -1771,15 +1994,12 @@ export default function App() {
                               onClick={() => {
                                 if (editingPrompt?.id) {
                                   handleDeletePrompt(editingPrompt.id);
-                                  setShowDeleteConfirm(false);
-                                  setEditingPrompt(null);
-                                  setViewingPromptId(null);
-                                  setIsModalOpen(false);
+                                  closeModal();
                                 }
                               }}
                               className="flex-1 py-3 bg-danger text-ink rounded-xl font-bold hover:bg-danger-hover transition-all shadow-lg shadow-danger/20"
                             >
-                              Delete
+                              {t.deleteAction}
                             </button>
                           </div>
                         </motion.div>
@@ -1912,40 +2132,41 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            onClick={() => setShowUnsavedConfirm(false)}
             className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6"
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-surface-2 border border-ink/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+              className="relative bg-surface-2 border border-ink/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
             >
+              <button
+                onClick={() => setShowUnsavedConfirm(false)}
+                aria-label={t.cancel}
+                title={t.cancel}
+                className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-ink/40 hover:text-ink hover:bg-ink/10 transition-all"
+              >
+                <X size={18} />
+              </button>
               <div className="w-16 h-16 bg-chip-image/10 text-chip-image-text rounded-full flex items-center justify-center mx-auto mb-6">
                 <Edit2 size={32} />
               </div>
               <h3 className="text-xl font-bold mb-2">{t.unsavedChanges}</h3>
               <p className="text-ink/40 text-sm mb-8">{t.unsavedChangesSub}</p>
-              <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
                 <button 
-                  onClick={() => {
-                    const form = document.getElementById('prompt-form') as HTMLFormElement;
-                    if (form) form.requestSubmit();
-                  }}
-                  className="w-full py-3 bg-accent text-accent-ink rounded-xl font-bold hover:bg-accent-hover transition-all"
-                >
-                  {t.apply}
-                </button>
-                <button 
-                  onClick={closeModal}
-                  className="w-full py-3 bg-ink/5 hover:bg-ink/10 rounded-xl font-bold transition-all text-ink/60"
+                  onClick={() => leaveForm(leaveIntent)}
+                  className="flex-1 py-3 bg-ink/5 hover:bg-ink/10 rounded-xl font-bold transition-all text-ink/60"
                 >
                   {t.discard}
                 </button>
                 <button 
-                  onClick={() => setShowUnsavedConfirm(false)}
-                  className="w-full py-3 bg-transparent hover:bg-ink/5 rounded-xl font-medium transition-all text-ink/40"
+                  onClick={applyUnsavedChanges}
+                  className="flex-1 py-3 bg-accent text-accent-ink rounded-xl font-bold hover:bg-accent-hover transition-all"
                 >
-                  {t.cancel}
+                  {t.apply}
                 </button>
               </div>
             </motion.div>
@@ -1953,22 +2174,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Footer */}
-      <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-ink/10 mt-12 relative z-10">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3 opacity-50">
-            <div className="w-6 h-6 bg-ink/20 rounded flex items-center justify-center font-display font-bold text-bg text-xs">
-              C
-            </div>
-            <span className="text-sm font-medium">CREO Prompt Library &copy; 2026</span>
-          </div>
-          <div className="flex items-center gap-6 text-sm text-ink/40">
-            <a href="#" className="hover:text-ink transition-colors">Privacy</a>
-            <a href="#" className="hover:text-ink transition-colors">Terms</a>
-            <a href="#" className="hover:text-ink transition-colors">Support</a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

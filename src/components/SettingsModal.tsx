@@ -1,5 +1,6 @@
+import { useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { X } from 'lucide-react';
+import { X, Download, FileUp, Loader2 } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { THEMES, ThemeName } from '../hooks/useTheme';
 
@@ -16,6 +17,11 @@ export function SettingsModal({
   setTheme,
   lang,
   setLang,
+  onExport,
+  onImportFile,
+  canImport,
+  isImporting,
+  promptCount,
   t,
 }: {
   isOpen: boolean;
@@ -24,8 +30,15 @@ export function SettingsModal({
   setTheme: (t: ThemeName) => void;
   lang: 'en' | 'ru';
   setLang: (l: 'en' | 'ru') => void;
+  onExport: () => void;
+  onImportFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  canImport: boolean;
+  isImporting: boolean;
+  promptCount: number;
   t: any;
 }) {
+  const importInputRef = useRef<HTMLInputElement>(null);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -41,7 +54,7 @@ export function SettingsModal({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm bg-surface border border-ink/10 rounded-3xl overflow-hidden shadow-2xl"
+            className="w-full max-w-sm max-h-[90vh] flex flex-col bg-surface border border-ink/10 rounded-3xl overflow-hidden shadow-2xl"
           >
             <div className="px-6 py-5 border-b border-ink/10 flex items-center justify-between">
               <h3 className="font-display font-bold text-base">{t.settings}</h3>
@@ -54,7 +67,7 @@ export function SettingsModal({
               </button>
             </div>
 
-            <div className="p-6 flex flex-col gap-5">
+            <div className="p-6 flex flex-col gap-5 overflow-y-auto">
               <div className="flex flex-col gap-2.5">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-ink/40">{t.theme}</div>
                 <div className="flex gap-2.5">
@@ -100,6 +113,45 @@ export function SettingsModal({
                     )}
                   >
                     EN
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2.5">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-ink/40">{t.library}</div>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={onExport}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-surface-2 hover:bg-ink/10 text-left transition-colors"
+                  >
+                    <span className="w-8 h-8 rounded-xl bg-accent/15 text-accent flex items-center justify-center shrink-0">
+                      <Download size={16} />
+                    </span>
+                    <span className="flex flex-col min-w-0">
+                      <span className="text-[13px] font-semibold">{t.exportPrompts}</span>
+                      <span className="text-[11px] text-ink/40">{t.exportHint} · {promptCount}</span>
+                    </span>
+                  </button>
+
+                  <input
+                    ref={importInputRef}
+                    type="file"
+                    accept="application/json"
+                    className="hidden"
+                    onChange={onImportFile}
+                  />
+                  <button
+                    onClick={() => importInputRef.current?.click()}
+                    disabled={!canImport || isImporting}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-surface-2 hover:bg-ink/10 text-left transition-colors disabled:opacity-50 disabled:hover:bg-surface-2"
+                  >
+                    <span className="w-8 h-8 rounded-xl bg-accent/15 text-accent flex items-center justify-center shrink-0">
+                      {isImporting ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
+                    </span>
+                    <span className="flex flex-col min-w-0">
+                      <span className="text-[13px] font-semibold">{t.importPrompts}</span>
+                      <span className="text-[11px] text-ink/40">{canImport ? t.importHint : t.importLoginRequired}</span>
+                    </span>
                   </button>
                 </div>
               </div>
