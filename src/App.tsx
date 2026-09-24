@@ -182,7 +182,10 @@ const TRANSLATIONS = {
     you: "you",
     permissionDenied: "You don't have permission for this",
     deleteIrreversible: "This action cannot be undone. The prompt will be permanently removed.",
-    deleteAction: "Delete"
+    deleteAction: "Delete",
+    personalLabel: "Mine",
+    createdByMe: "Created by me",
+    resetFilters: "Show all (reset filters)"
   },
   ru: {
     search: "Поиск",
@@ -302,7 +305,10 @@ const TRANSLATIONS = {
     you: "вы",
     permissionDenied: "Недостаточно прав для этого действия",
     deleteIrreversible: "Это действие нельзя отменить. Промпт будет удалён навсегда.",
-    deleteAction: "Удалить"
+    deleteAction: "Удалить",
+    personalLabel: "Моё",
+    createdByMe: "Создано мной",
+    resetFilters: "Показать все (сбросить фильтры)"
   }
 };
 
@@ -332,7 +338,8 @@ export default function App() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  // Category filters are toggles combined with OR; an empty list means "all".
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | 'image' | 'video'>('all');
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -363,6 +370,7 @@ export default function App() {
   const [leaveIntent, setLeaveIntent] = useState<'close' | 'exitEdit'>('close');
   const afterSaveIntent = useRef<'close' | 'exitEdit' | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [showMineOnly, setShowMineOnly] = useState(false);
   const [placeholderValues, setPlaceholderValues] = useState<Record<string, string>>({});
   const [modalView, setModalView] = useState<'form' | 'link'>('form');
   const [linkSearchQuery, setLinkSearchQuery] = useState('');
@@ -446,12 +454,12 @@ export default function App() {
       await Promise.all(updatePromisesFixed);
 
       toast.success("Category deleted and prompts updated");
-      if (selectedCategory === categoryName) setSelectedCategory('All');
+      setSelectedCategories(prev => prev.filter(c => c !== categoryName));
     } catch (e) {
       console.error("Error deleting category:", e);
       toast.error("Failed to delete category");
     }
-  }, [selectedCategory, t.deleteConfirm]);
+  }, [t.deleteConfirm]);
 
   const handleRenameCategory = useCallback(async (oldName: string, newName: string) => {
     if (!newName.trim() || oldName === newName) {
@@ -472,13 +480,13 @@ export default function App() {
       await Promise.all(updatePromptPromises);
 
       toast.success("Category renamed");
-      if (selectedCategory === oldName) setSelectedCategory(newName.trim());
+      setSelectedCategories(prev => prev.map(c => (c === oldName ? newName.trim() : c)));
       setRenamingCategory(null);
     } catch (e) {
       console.error("Error renaming category:", e);
       toast.error("Failed to rename category");
     }
-  }, [selectedCategory]);
+  }, []);
 
   useEffect(() => {
     if (editingPrompt) {
@@ -713,10 +721,11 @@ export default function App() {
       const matchesSearch = p.title.toLowerCase().includes(query) ||
                             p.content.toLowerCase().includes(query) ||
                             (p.tags && p.tags.some(tag => tag.toLowerCase().includes(query)));
-      const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
+      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(p.category || '');
       const matchesFavorites = !showFavoritesOnly || (userProfile?.favoritePromptIds?.includes(p.id!) || false);
+      const matchesMine = !showMineOnly || (!!user && p.authorUid === user.uid);
       const matchesType = selectedTypeFilter === 'all' || p.type === selectedTypeFilter;
-      return matchesSearch && matchesCategory && matchesFavorites && matchesType;
+      return matchesSearch && matchesCategory && matchesFavorites && matchesMine && matchesType;
     });
 
     return [...filtered].sort((a, b) => {
@@ -732,7 +741,31 @@ export default function App() {
           return (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0);
       }
     });
-  }, [prompts, searchQuery, selectedCategory, showFavoritesOnly, userProfile, selectedTypeFilter, sortBy]);
+  }, [prompts, searchQuery, selectedCategories, showFavoritesOnly, showMineOnly, user, userProfile, selectedTypeFilter, sortBy]);
+
+  const toggleCategory = useCallback((category: string) => {
+    setSelectedCategories(prev =>
+      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
+    );
+  }, []);
+
+  // "All" is the master switch: it turns every category and personal filter off.
+  const clearFilters = useCallback(() => {
+    setSelectedCategories([]);
+    setShowFavoritesOnly(false);
+    setShowMineOnly(false);
+  }, []);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    prompts.forEach(p => {
+      if (p.category) counts[p.category] = (counts[p.category] || 0) + 1;
+    });
+    return counts;
+  }, [prompts]);
+
+  const favoritesCount = userProfile?.favoritePromptIds?.filter(id => prompts.some(p => p.id === id)).length ?? 0;
+  const mineCount = user ? prompts.filter(p => p.authorUid === user.uid).length : 0;
 
   const handleSavePrompt = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1034,12 +1067,19 @@ export default function App() {
       <div className="flex relative z-10">
         <Sidebar
           categories={categories}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
+          selectedCategories={selectedCategories}
+          onToggleCategory={toggleCategory}
+          onClearFilters={clearFilters}
+          categoryCounts={categoryCounts}
+          totalCount={prompts.length}
           selectedTypeFilter={selectedTypeFilter}
           onSelectType={setSelectedTypeFilter}
           showFavoritesOnly={showFavoritesOnly}
           onToggleFavoritesOnly={() => setShowFavoritesOnly(!showFavoritesOnly)}
+          favoritesCount={favoritesCount}
+          showMineOnly={showMineOnly}
+          onToggleMineOnly={() => setShowMineOnly(!showMineOnly)}
+          mineCount={mineCount}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           onOpenSettings={() => setIsSettingsOpen(true)}
@@ -1144,7 +1184,7 @@ export default function App() {
           {/* Grid */}
           <AnimatePresence mode="wait">
             <motion.div
-              key={selectedCategory + showFavoritesOnly + searchQuery + selectedTypeFilter + sortBy}
+              key={selectedCategories.join('|') + showFavoritesOnly + showMineOnly + searchQuery + selectedTypeFilter + sortBy}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, transition: { duration: 0.08 } }}

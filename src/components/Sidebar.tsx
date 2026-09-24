@@ -8,18 +8,26 @@ import {
   LogOut,
   Pencil,
   ShieldCheck,
+  UserRound,
 } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { getCategoryColors } from '../lib/categoryColor';
 
 export function Sidebar({
   categories,
-  selectedCategory,
-  onSelectCategory,
+  selectedCategories,
+  onToggleCategory,
+  onClearFilters,
+  categoryCounts,
+  totalCount,
   selectedTypeFilter,
   onSelectType,
   showFavoritesOnly,
   onToggleFavoritesOnly,
+  favoritesCount,
+  showMineOnly,
+  onToggleMineOnly,
+  mineCount,
   sidebarOpen,
   onToggleSidebar,
   onOpenSettings,
@@ -33,12 +41,19 @@ export function Sidebar({
   t,
 }: {
   categories: string[];
-  selectedCategory: string;
-  onSelectCategory: (category: string) => void;
+  selectedCategories: string[];
+  onToggleCategory: (category: string) => void;
+  onClearFilters: () => void;
+  categoryCounts: Record<string, number>;
+  totalCount: number;
   selectedTypeFilter: 'all' | 'image' | 'video';
   onSelectType: (type: 'all' | 'image' | 'video') => void;
   showFavoritesOnly: boolean;
   onToggleFavoritesOnly: () => void;
+  favoritesCount: number;
+  showMineOnly: boolean;
+  onToggleMineOnly: () => void;
+  mineCount: number;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
   onOpenSettings: () => void;
@@ -53,6 +68,27 @@ export function Sidebar({
 }) {
   const [logoHover, setLogoHover] = useState(false);
   const navJustify = sidebarOpen ? '' : 'justify-center';
+  const noFilters = selectedCategories.length === 0 && !showFavoritesOnly && !showMineOnly;
+  const navItem = "flex items-center gap-2.5 px-2.5 py-2 rounded-[11px] text-[13px] font-semibold whitespace-nowrap transition-colors";
+  const idle = "text-ink/60 hover:bg-ink/5 hover:text-ink";
+
+  const label = (text: string, count?: number) =>
+    sidebarOpen && (
+      <>
+        <span className="overflow-hidden text-ellipsis flex-1 text-left">{text}</span>
+        {count !== undefined && <span className="text-[11px] font-bold opacity-50 tabular-nums">{count}</span>}
+      </>
+    );
+
+  const sectionTitle = (text: string, action?: React.ReactNode) =>
+    sidebarOpen ? (
+      <div className="flex items-center justify-between px-2.5 pt-1.5 pb-0.5">
+        <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-ink/40">{text}</span>
+        {action}
+      </div>
+    ) : (
+      <div className="mx-2.5 my-1 border-t border-ink/10" />
+    );
 
   return (
     <div
@@ -107,65 +143,70 @@ export function Sidebar({
       )}
 
       <div className="flex flex-col gap-0.5 overflow-y-auto flex-1 no-scrollbar">
-        {sidebarOpen && (
-          <div className="flex items-center justify-between px-2.5 pt-1.5 pb-0.5">
-            <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-ink/40">
-              {t.categoriesLabel}
-            </span>
-            {isAdmin && (
-              <button
-                onClick={onManageCategories}
-                title={t.manageCategories}
-                className="text-ink/30 hover:text-accent transition-colors"
-              >
-                <Pencil size={12} />
-              </button>
-            )}
-          </div>
+        {user && (
+          <>
+            {sectionTitle(t.personalLabel)}
+            <button
+              onClick={onToggleFavoritesOnly}
+              title={t.favorites}
+              aria-pressed={showFavoritesOnly}
+              className={cn(navItem, navJustify, showFavoritesOnly ? "bg-danger/20 text-danger" : idle)}
+            >
+              <Heart size={14} className="shrink-0" fill={showFavoritesOnly ? "currentColor" : "none"} />
+              {label(t.favorites, favoritesCount)}
+            </button>
+            <button
+              onClick={onToggleMineOnly}
+              title={t.createdByMe}
+              aria-pressed={showMineOnly}
+              className={cn(navItem, navJustify, showMineOnly ? "bg-accent/20 text-accent" : idle)}
+            >
+              <UserRound size={14} className="shrink-0" />
+              {label(t.createdByMe, mineCount)}
+            </button>
+            <div className="h-2" />
+          </>
         )}
 
-        {user && (
-          <button
-            onClick={onToggleFavoritesOnly}
-            className={cn(
-              "flex items-center gap-2.5 px-2.5 py-2 rounded-[11px] text-[13px] font-semibold whitespace-nowrap transition-colors",
-              navJustify,
-              showFavoritesOnly ? "bg-danger/20 text-danger" : "text-ink/60 hover:bg-ink/5 hover:text-ink"
-            )}
-          >
-            <Heart size={14} className="shrink-0" fill={showFavoritesOnly ? "currentColor" : "none"} />
-            {sidebarOpen && <span className="overflow-hidden text-ellipsis">{t.favorites}</span>}
-          </button>
+        {sectionTitle(
+          t.categoriesLabel,
+          isAdmin && (
+            <button
+              onClick={onManageCategories}
+              title={t.manageCategories}
+              className="text-ink/30 hover:text-accent transition-colors"
+            >
+              <Pencil size={12} />
+            </button>
+          )
         )}
 
         <button
-          onClick={() => onSelectCategory('All')}
-          className={cn(
-            "flex items-center gap-2.5 px-2.5 py-2 rounded-[11px] text-[13px] font-semibold whitespace-nowrap transition-colors",
-            navJustify,
-            selectedCategory === 'All' ? "bg-accent text-accent-ink" : "text-ink/60 hover:bg-ink/5 hover:text-ink"
-          )}
+          onClick={onClearFilters}
+          title={t.resetFilters}
+          className={cn(navItem, navJustify, noFilters ? "bg-accent text-accent-ink" : idle)}
         >
           <span className="w-[9px] h-[9px] rounded-full shrink-0 bg-current opacity-60" />
-          {sidebarOpen && <span className="overflow-hidden text-ellipsis">{t.all}</span>}
+          {label(t.all, totalCount)}
         </button>
 
         {categories.map((cat) => {
-          const active = selectedCategory === cat;
+          const active = selectedCategories.includes(cat);
           const colors = getCategoryColors(cat, isLight);
           return (
             <button
               key={cat}
-              onClick={() => onSelectCategory(cat)}
-              className={cn(
-                "flex items-center gap-2.5 px-2.5 py-2 rounded-[11px] text-[13px] font-semibold whitespace-nowrap transition-colors",
-                navJustify,
-                !active && "text-ink/60 hover:bg-ink/5 hover:text-ink"
-              )}
-              style={active ? { background: colors.bg, color: colors.text } : undefined}
+              onClick={() => onToggleCategory(cat)}
+              title={cat}
+              aria-pressed={active}
+              className={cn(navItem, navJustify, !active && idle)}
+              style={active ? { background: colors.bg, color: colors.text, boxShadow: `inset 0 0 0 1px ${colors.dim}` } : undefined}
             >
-              <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: colors.dot }} />
-              {sidebarOpen && <span className="overflow-hidden text-ellipsis">{cat}</span>}
+              <span
+                className={cn("w-[9px] h-[9px] rounded-full shrink-0 transition-shadow", active && "ring-2 ring-current/30")}
+                style={{ background: colors.dot }}
+              />
+              {label(cat, categoryCounts[cat] || 0)}
             </button>
           );
         })}
